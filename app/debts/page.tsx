@@ -1,2 +1,2 @@
-import ModulePage from "@/components/module-page";
-export default function Page(){ return <ModulePage type="debts"/>; }
+import DebtsPage from "@/components/debts-page";
+export default function Page(){ return <DebtsPage/>; }

@@ -14,6 +14,35 @@ Aplicação SaaS de organização financeira pessoal e para casais, construída 
 
 As fontes usam uma pilha tipográfica local do sistema. Isso evita downloads externos durante `next build` e torna o deploy mais previsível.
 
+## Motor financeiro personalizado
+
+Enquanto o Supabase não está conectado, o onboarding persiste os dados no `localStorage`. Dashboard, dívidas, metas e relatório usam a mesma fonte e recalculam:
+
+- receita, despesas, parcelas e saldo mensal;
+- comprometimento da renda e saúde financeira;
+- prazo estimado para quitar dívidas;
+- prazo e data para atingir metas;
+- projeção anual atual versus Plano de Recomeço;
+- crescimento potencial da economia em 1, 3 e 5 anos.
+
+As funções ficam em `lib/financial-calculations.ts` e a persistência em `lib/financial-storage.ts`.
+
+## Jurídico e LGPD
+
+O MVP inclui:
+
+- `/privacy` - Política de Privacidade e direitos do titular;
+- `/terms` - Termos de Uso, limites educacionais, cancelamento e reembolso;
+- `/cookies` - Política de Cookies e preparação para integrações analíticas;
+- `/contact` - canal de suporte e solicitações de privacidade;
+- banner de preferências de cookies;
+- aceite obrigatório de Termos e Privacidade no cadastro;
+- consentimento opcional e desmarcado para comunicações;
+- garantia comercial de 30 dias e regras de cancelamento;
+- aviso educativo nos relatórios financeiros.
+
+Antes da operação comercial, substitua os dados empresariais de placeholder e obtenha revisão jurídica especializada sobre os documentos, contratos com operadores, processo de atendimento a titulares, segurança da informação e regras de consumo aplicáveis.
+
 ## Requisitos
 
 - Node.js 20 ou superior

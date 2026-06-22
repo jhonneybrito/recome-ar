@@ -166,22 +166,48 @@ export default function LandingPage() {
       <section id="planos" className="bg-cream py-24 sm:py-32">
         <div className="container-page">
           <div className="text-center"><p className="eyebrow">Planos transparentes</p><h2 className="mt-5 font-display text-5xl sm:text-6xl">Comece no seu ritmo.</h2><p className="mx-auto mt-4 max-w-lg text-ink/50">Sem letras miúdas, sem culpa e sem transformar sua vida em uma planilha.</p></div>
-          <div className="mx-auto mt-14 grid max-w-4xl gap-5 md:grid-cols-2">
-            <Card className="p-8 sm:p-10">
-              <div className="flex items-center justify-between"><Pill tone="neutral">Individual</Pill><span className="text-xs font-bold text-ink/35">Para você</span></div>
-              <p className="mt-8 font-display text-5xl">R$ 19,90<span className="font-sans text-sm text-ink/35"> /mês</span></p>
-              <p className="mt-4 text-sm text-ink/50">Clareza para organizar sua própria jornada.</p>
-              <ul className="my-9 grid gap-3"><CheckItem>Dashboard completo</CheckItem><CheckItem>Metas e dívidas</CheckItem><CheckItem>Plano inteligente mensal</CheckItem></ul>
+          <div className="mx-auto mt-14 grid max-w-6xl gap-5 lg:grid-cols-3">
+            <Card className="p-8">
+              <div className="flex items-center justify-between"><Pill tone="neutral">Gratuito</Pill><span className="text-xs font-bold text-ink/35">Para começar</span></div>
+              <p className="mt-8 font-display text-5xl">R$ 0</p>
+              <p className="mt-4 text-sm text-ink/50">Conheça sua realidade financeira sem compromisso.</p>
+              <ul className="my-9 grid gap-3"><CheckItem>Controle financeiro básico</CheckItem><CheckItem>Dashboard</CheckItem><CheckItem>1 diagnóstico personalizado</CheckItem></ul>
               <Link href="/register"><Button variant="secondary" className="w-full !rounded-full">Começar grátis</Button></Link>
             </Card>
-            <Card className="relative overflow-hidden bg-forest p-8 text-white sm:p-10">
-              <OrbitMark className="absolute -bottom-20 -right-20 w-72 text-white/5"/>
-              <div className="relative flex items-center justify-between"><Pill>Plano a Dois</Pill><span className="rounded-full bg-light px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink">Mais escolhido</span></div>
-              <p className="relative mt-8 font-display text-5xl">R$ 24,90<span className="font-sans text-sm text-white/35"> /mês</span></p>
-              <p className="relative mt-4 text-sm text-white/50">Planos, sonhos e tranquilidade construídos juntos.</p>
-              <ul className="relative my-9 grid gap-3 [&_li]:text-white/70"><CheckItem>Tudo do Individual</CheckItem><CheckItem>Visão compartilhada</CheckItem><CheckItem>Metas do casal</CheckItem></ul>
-              <Link href="/register"><Button className="relative w-full !rounded-full !bg-white !text-forest">Começar a dois <ArrowRight size={16}/></Button></Link>
+            <Card className="p-8">
+              <div className="flex items-center justify-between"><Pill tone="neutral">Premium mensal</Pill><span className="text-xs font-bold text-ink/35">Flexível</span></div>
+              <p className="mt-8 font-display text-5xl">R$ 27<span className="font-sans text-sm text-ink/35"> /mês</span></p>
+              <p className="mt-4 text-sm text-ink/50">Acompanhamento contínuo para evoluir mês a mês.</p>
+              <ul className="my-9 grid gap-3"><CheckItem>Relatórios ilimitados</CheckItem><CheckItem>Projeções de metas e dívidas</CheckItem><CheckItem>Plano de Recomeço atualizado</CheckItem></ul>
+              <Link href="/register"><Button variant="secondary" className="w-full !rounded-full">Assinar mensal</Button></Link>
             </Card>
+            <Card className="relative overflow-hidden bg-forest p-8 text-white">
+              <OrbitMark className="absolute -bottom-20 -right-20 w-72 text-white/5"/>
+              <div className="relative flex items-center justify-between"><Pill>Premium anual</Pill><span className="rounded-full bg-light px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-ink">Mais popular</span></div>
+              <p className="relative mt-8 font-display text-5xl">R$ 147<span className="font-sans text-sm text-white/35"> /ano</span></p>
+              <p className="relative mt-3 text-sm font-bold text-light">Menos de R$ 12,25 por mês</p>
+              <p className="relative mt-2 text-sm text-white/50">Economize R$ 177 por ano.</p>
+              <ul className="relative my-9 grid gap-3 [&_li]:text-white/70"><CheckItem>Tudo do Premium mensal</CheckItem><CheckItem>Melhor custo-benefício</CheckItem><CheckItem>12 meses de evolução</CheckItem></ul>
+              <Link href="/register"><Button className="relative w-full !rounded-full !bg-white !text-forest">Escolher anual <ArrowRight size={16}/></Button></Link>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-20">
+        <div className="container-page">
+          <div className="relative mx-auto grid max-w-5xl overflow-hidden rounded-[36px] border border-ink/10 bg-mist lg:grid-cols-[280px_1fr]">
+            <div className="brand-grid flex min-h-64 items-center justify-center bg-light p-8">
+              <div className="grid h-44 w-44 rotate-[-5deg] place-items-center rounded-full border-4 border-ink bg-light text-center shadow-xl">
+                <div><ShieldCheck className="mx-auto" size={32}/><p className="mt-3 text-xs font-extrabold uppercase tracking-[.15em]">Garantia<br/>Incondicional</p><p className="mt-2 font-display text-4xl">30 dias</p></div>
+              </div>
+            </div>
+            <div className="flex flex-col justify-center p-8 sm:p-12">
+              <p className="eyebrow">Experimente com tranquilidade</p>
+              <h2 className="mt-4 font-display text-4xl sm:text-5xl">Tempo suficiente para saber se faz sentido para você.</h2>
+              <p className="mt-5 max-w-2xl leading-7 text-ink/60">Experimente o Recomeçar por até 30 dias. Se perceber que a plataforma não é adequada para você, poderá solicitar o reembolso integral dentro desse período.</p>
+              <p className="mt-4 text-xs leading-5 text-ink/45">A assinatura pode ser cancelada a qualquer momento para impedir cobranças futuras. Após 30 dias, não há reembolso proporcional de períodos já utilizados, ressalvados direitos previstos em lei. Consulte os <Link href="/terms" className="font-bold text-forest underline">Termos de Uso</Link>.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -196,7 +222,7 @@ export default function LandingPage() {
       <footer className="bg-ink py-12 text-white">
         <div className="container-page flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
           <div className="[&_span]:!text-white [&_span_span]:!text-peach"><Logo/><p className="mt-5 max-w-sm text-sm leading-6 text-white/40">Inteligência financeira que respeita o tempo, as escolhas e a vida de cada pessoa.</p></div>
-          <p className="text-xs text-white/30">© 2026 Recomeçar. Clareza para seguir.</p>
+          <div className="text-xs text-white/40"><nav className="mb-4 flex flex-wrap gap-4 font-bold text-white/65"><Link href="/terms">Termos</Link><Link href="/privacy">Privacidade</Link><Link href="/cookies">Cookies</Link><Link href="/contact">Contato</Link></nav><p>© 2026 Recomeçar. Clareza para seguir.</p></div>
         </div>
       </footer>
     </main>

@@ -1,2 +1,2 @@
-import ModulePage from "@/components/module-page";
-export default function Page(){ return <ModulePage type="ai-plan"/>; }
+import FinancialReport from "@/components/financial-report";
+export default function Page(){ return <FinancialReport/>; }

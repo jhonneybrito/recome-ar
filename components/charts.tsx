@@ -1,12 +1,11 @@
 "use client";
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { cashFlow } from "@/lib/mock-data";
 
-export function CashFlowChart() {
+export function CashFlowChart({ data }: { data: { month: string; entradas: number; saidas: number }[] }) {
   return (
     <ResponsiveContainer width="100%" height={230}>
-      <AreaChart data={cashFlow} margin={{ top: 10, right: 5, left: 0, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 10, right: 5, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1F5C47" stopOpacity={0.25}/><stop offset="100%" stopColor="#1F5C47" stopOpacity={0}/></linearGradient>
         </defs>

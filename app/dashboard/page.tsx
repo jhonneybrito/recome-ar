@@ -1,44 +1,100 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Bot, ChevronRight, CircleDollarSign, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Bot, CalendarClock, CircleDollarSign, HeartPulse, Landmark, Wallet } from "lucide-react";
 import AppShell from "@/components/app-shell";
 import { CashFlowChart } from "@/components/charts";
 import { Card, Pill, ProgressBar } from "@/components/ui";
-import { transactions } from "@/lib/mock-data";
-import Link from "next/link";
+import {
+  calculateAnnualProjection, calculateDebtMonthlyPayments, calculateDebtTotal,
+  calculateFinancialHealth, calculateFutureSavings, calculateIncomeCommitment,
+  calculateMonthlyBalance, calculateMonthlyExpenses, calculateTotalIncome,
+  estimateDebtPayoffTime, estimateGoalTime, formatDuration, getEstimatedDate,
+} from "@/lib/financial-calculations";
+import { useFinancialProfile } from "@/lib/financial-storage";
 
-const money = (value: number) => `${value < 0 ? "- " : ""}R$ ${Math.abs(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const monthYear = (date: Date | null) => date ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date) : "depende de criar saldo mensal";
 
 export default function Dashboard() {
+  const { profile } = useFinancialProfile();
+  const income = calculateTotalIncome(profile);
+  const expenses = calculateMonthlyExpenses(profile);
+  const payments = calculateDebtMonthlyPayments(profile);
+  const debt = calculateDebtTotal(profile);
+  const balance = calculateMonthlyBalance(profile);
+  const commitment = calculateIncomeCommitment(profile);
+  const health = calculateFinancialHealth(profile);
+  const goalContribution = Math.max(0, balance * 0.7);
+  const goalMonths = estimateGoalTime(profile.goalAmount, profile.currentSavings, goalContribution);
+  const payoffMonths = estimateDebtPayoffTime(debt, payments + Math.max(0, balance * 0.3));
+  const annual = calculateAnnualProjection(profile);
+
+  const flow = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"].map((month, index) => ({
+    month,
+    entradas: Math.round(income * (0.96 + index * 0.008)),
+    saidas: Math.round((expenses + payments) * (1.04 - index * 0.008)),
+  }));
+
+  const future = [1, 3, 5].map((years) => ({
+    years,
+    value: calculateFutureSavings(profile.currentSavings, goalContribution, years),
+  }));
+
   return (
-    <AppShell title="Bom dia, Marina" subtitle="Aqui está o que importa para o seu mês.">
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
-        <div className="grid gap-5">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              ["Saldo atual", "R$ 3.840,00", Wallet, "+ 12% este mês", "green"],
-              ["Receitas", "R$ 8.200,00", ArrowUpRight, "2 fontes de renda", "green"],
-              ["Despesas", "R$ 4.360,00", ArrowDownRight, "53% da sua renda", "peach"],
-              ["Livre para planejar", "R$ 1.140,00", CircleDollarSign, "Bom espaço", "green"],
-            ].map(([label, value, Icon, note, tone]) => { const I = Icon as typeof Wallet; return <Card key={String(label)}><div className="flex items-center justify-between"><span className={`grid h-10 w-10 place-items-center rounded-2xl ${tone === "peach" ? "bg-peach/25 text-[#9a532f]" : "bg-mist text-forest"}`}><I size={18} /></span><span className="text-xs font-bold text-forest">{String(note)}</span></div><p className="mt-5 text-xs font-bold text-ink/40">{String(label)}</p><p className="mt-1 font-display text-2xl">{String(value)}</p></Card> })}
-          </div>
-          <Card className="p-6">
-            <div className="flex items-start justify-between"><div><h2 className="font-display text-2xl">Seu fluxo financeiro</h2><p className="mt-1 text-xs text-ink/40">Entradas e saídas nos últimos 5 meses</p></div><Pill tone="neutral">Últimos 5 meses</Pill></div>
-            <div className="mt-6"><CashFlowChart /></div>
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center justify-between"><div><h2 className="font-display text-2xl">Movimentações recentes</h2><p className="mt-1 text-xs text-ink/40">Seu dinheiro em movimento</p></div><Link href="/transactions" className="flex items-center gap-1 text-xs font-extrabold text-forest">Ver todas <ChevronRight size={15} /></Link></div>
-            <div className="mt-5 divide-y divide-ink/5">{transactions.slice(0,4).map((t) => <div key={t.name} className="flex items-center gap-4 py-4"><span className={`grid h-10 w-10 place-items-center rounded-2xl ${t.type === "income" ? "bg-mist text-forest" : "bg-peach/20 text-[#9a532f]"}`}>{t.type === "income" ? <TrendingUp size={18} /> : <TrendingDown size={18} />}</span><div><p className="text-sm font-extrabold">{t.name}</p><p className="text-xs text-ink/40">{t.category} · {t.date}</p></div><b className={`ml-auto text-sm ${t.type === "income" ? "text-forest" : ""}`}>{money(t.value)}</b></div>)}</div>
-          </Card>
+    <AppShell title={`Olá, ${profile.name || "por aqui"}`} subtitle="Todos os indicadores abaixo usam os dados informados no onboarding.">
+      <div className="grid gap-5">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Saldo mensal", money(balance), Wallet, balance >= 0 ? "Disponível após tudo" : "Déficit do mês", balance >= 0 ? "green" : "peach"],
+            ["Receita mensal", money(income), ArrowUpRight, profile.otherIncome > 0 ? "2 fontes informadas" : "1 fonte informada", "green"],
+            ["Despesas mensais", money(expenses), ArrowDownRight, `${income ? Math.round(expenses / income * 100) : 0}% da renda`, "peach"],
+            ["Parcelas mensais", money(payments), Landmark, debt ? `${money(debt)} em aberto` : "Sem dívidas", payments ? "peach" : "green"],
+          ].map(([label,value,Icon,note,tone]) => { const I=Icon as typeof Wallet; return <Card key={String(label)}><div className="flex items-center justify-between gap-3"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${tone==="peach"?"bg-peach/20 text-[#9a532f]":"bg-mist text-forest"}`}><I size={18}/></span><span className="text-right text-[11px] font-bold text-ink/45">{String(note)}</span></div><p className="mt-5 text-xs font-bold text-ink/40">{String(label)}</p><p className="mt-1 font-display text-2xl">{String(value)}</p></Card>})}
         </div>
-        <aside className="grid content-start gap-5">
-          <Card className="overflow-hidden bg-forest p-0 text-white">
-            <div className="p-6"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10"><Bot /></span><Pill tone="peach"><span className="mr-1">✦</span> Seu plano inteligente</Pill><h2 className="mt-4 font-display text-3xl">Você está mais perto do que imagina.</h2><p className="mt-3 text-sm leading-6 text-white/55">Se mantiver o ritmo atual, sua reserva chega a R$ 10 mil em 5 meses.</p><Link href="/ai-plan" className="mt-6 flex items-center gap-2 text-sm font-extrabold">Ver próximos passos <ArrowRight size={16} /></Link></div>
-            <div className="bg-white/10 px-6 py-4 text-xs text-white/55">Atualizado hoje às 08:30</div>
-          </Card>
-          <Card>
-            <div className="flex items-center justify-between"><h2 className="font-display text-2xl">Metas em foco</h2><Link href="/goals" className="text-xs font-bold text-forest">Ver todas</Link></div>
-            {[["Reserva de emergência", "R$ 6.800 de R$ 10.000", 68], ["Viagem para Portugal", "R$ 2.100 de R$ 8.000", 26]].map(([name,note,value]) => <div key={String(name)} className="mt-6"><div className="mb-3 flex justify-between"><div><p className="text-sm font-extrabold">{String(name)}</p><p className="mt-1 text-xs text-ink/40">{String(note)}</p></div><b className="text-sm text-forest">{String(value)}%</b></div><ProgressBar value={Number(value)} color={Number(value) > 50 ? "bg-forest" : "bg-peach"} /></div>)}
-          </Card>
-        </aside>
+
+        <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+          <div className="grid gap-5">
+            <Card className="p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-2xl">Fluxo calculado</h2><p className="mt-1 text-xs text-ink/40">Tendência baseada na sua renda e nos compromissos atuais</p></div><Pill tone="neutral">Saldo: {money(balance)}</Pill></div>
+              <div className="mt-6"><CashFlowChart data={flow}/></div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between"><div><h2 className="font-display text-2xl">Projeção anual</h2><p className="mt-1 text-xs text-ink/40">Situação atual versus redução de 10% nos gastos variáveis</p></div><Pill tone={annual.planned.balance > annual.current.balance ? "green" : "neutral"}>+ {money(annual.potentialSavings)}</Pill></div>
+              <div className="mt-6 overflow-x-auto"><table className="w-full min-w-[560px] text-sm"><thead className="text-left text-xs text-ink/40"><tr><th className="pb-3">Em 12 meses</th><th>Atual</th><th>Plano de Recomeço</th></tr></thead><tbody className="divide-y divide-ink/5">{[["Receitas",annual.current.income,annual.planned.income],["Despesas",annual.current.expenses,annual.planned.expenses],["Parcelas",annual.current.debtPayments,annual.planned.debtPayments],["Saldo anual",annual.current.balance,annual.planned.balance]].map(([label,current,planned])=><tr key={String(label)}><td className="py-4 font-bold">{String(label)}</td><td>{money(Number(current))}</td><td className="font-extrabold text-forest">{money(Number(planned))}</td></tr>)}</tbody></table></div>
+            </Card>
+
+            <div className="grid gap-5 md:grid-cols-3">
+              {future.map(({years,value})=><Card key={years} className={years===3?"bg-light":""}><p className="text-xs font-bold uppercase tracking-wider text-ink/40">Em {years} {years===1?"ano":"anos"}</p><p className="mt-3 font-display text-3xl">{money(value)}</p><p className="mt-2 text-xs leading-5 text-ink/45">mantendo {money(goalContribution)} por mês, com projeção conservadora.</p></Card>)}
+            </div>
+          </div>
+
+          <aside className="grid content-start gap-5">
+            <Card className="bg-forest p-6 text-white">
+              <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10"><HeartPulse/></span><Pill tone={health.color}>{health.score}/100</Pill></div>
+              <p className="mt-6 text-xs font-bold uppercase tracking-widest text-white/45">Saúde financeira</p><h2 className="mt-2 font-display text-4xl">{health.label}</h2><p className="mt-3 text-sm leading-6 text-white/60">{health.message}</p>
+              <div className="mt-5"><ProgressBar value={health.score} color="bg-light"/></div>
+              <p className="mt-4 text-xs text-white/45">{commitment.toFixed(0)}% da renda está comprometida.</p>
+            </Card>
+
+            <Card>
+              <CalendarClock className="text-forest"/>
+              <h2 className="mt-5 font-display text-2xl">Prazos reais</h2>
+              <div className="mt-5 grid gap-5">
+                <div><p className="text-xs font-bold text-ink/40">Quitar dívidas</p><b className="mt-1 block">{formatDuration(payoffMonths)}</b><p className="mt-1 text-xs text-ink/45">{monthYear(getEstimatedDate(payoffMonths))}</p></div>
+                <div><p className="text-xs font-bold text-ink/40">Atingir {money(profile.goalAmount)}</p><b className="mt-1 block">{formatDuration(goalMonths)}</b><p className="mt-1 text-xs text-ink/45">{monthYear(getEstimatedDate(goalMonths))}</p></div>
+              </div>
+            </Card>
+
+            <Card className="bg-mist">
+              <Bot className="text-forest"/>
+              <h2 className="mt-5 font-display text-2xl">Seu próximo movimento</h2>
+              <p className="mt-3 text-sm leading-6 text-ink/55">{balance > 0 ? `Direcione ${money(goalContribution)} para “${profile.mainGoal}” e reserve o restante como margem do mês.` : "Seu primeiro movimento é recuperar um saldo positivo antes de acelerar metas."}</p>
+              <Link href="/ai-plan" className="mt-5 flex items-center gap-2 text-sm font-extrabold text-forest">Ver relatório completo <ArrowRight size={16}/></Link>
+            </Card>
+          </aside>
+        </div>
       </div>
     </AppShell>
   );
