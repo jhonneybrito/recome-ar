@@ -12,6 +12,8 @@ Aplicação SaaS de organização financeira pessoal e para casais, construída 
 - Stripe
 - Recharts
 
+As fontes usam uma pilha tipográfica local do sistema. Isso evita downloads externos durante `next build` e torna o deploy mais previsível.
+
 ## Requisitos
 
 - Node.js 20 ou superior
@@ -48,10 +50,13 @@ As páginas demonstrativas funcionam sem serviços externos configurados. O endp
 ## Validar a produção
 
 ```bash
+npm ci
 npm run typecheck
 npm run build
 npm run start
 ```
+
+O projeto fixa `browserslist@4.24.4` para manter o pipeline de CSS/Next.js determinístico. Não remova o `package-lock.json` antes do deploy.
 
 ## Deploy na Vercel
 
@@ -103,6 +108,8 @@ Se enviar apenas o conteúdo da pasta `recomecar` para o repositório, deixe **R
 5. Não configure `public`, `out` ou `.next` como Output Directory.
 6. Cadastre as variáveis necessárias em **Settings > Environment Variables**.
 7. Faça um novo deploy com **Redeploy > Clear build cache and redeploy**.
+
+Se um deployment anterior falhou durante `next build`, confirme que o commit mais recente contém o `package-lock.json` atualizado e limpe o cache da Vercel. A instalação recomendada em CI é `npm ci`; a configuração atual também aceita `npm install`.
 
 A Vercel detecta automaticamente a URL pública pelo valor de `VERCEL_URL`. `NEXT_PUBLIC_APP_URL` é opcional, mas pode ser definido com o domínio canônico de produção, por exemplo `https://recomecar.com`.
 

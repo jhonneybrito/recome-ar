@@ -21,8 +21,8 @@ export default {
         soft: "0 24px 70px rgba(25, 66, 51, 0.10)",
       },
       fontFamily: {
-        sans: ["var(--font-manrope)", "sans-serif"],
-        display: ["var(--font-newsreader)", "serif"],
+        sans: ["Manrope", "Avenir Next", "Avenir", "Segoe UI", "sans-serif"],
+        display: ["Newsreader", "Iowan Old Style", "Baskerville", "Georgia", "serif"],
       },
     },
   },
