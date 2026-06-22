@@ -14,30 +14,34 @@ export interface FinancialProfile {
   debtType: string;
   goalAmount: number;
   currentSavings: number;
+  accumulatedNetWorth: number;
+  netWorthGoal: number;
   updatedAt: string;
 }
 
 export interface FinancialHealth {
   score: number;
-  label: "Crítica" | "Atenção" | "Estável" | "Saudável";
+  label: "Precisa de cuidado" | "Atenção" | "Estável" | "Saudável";
   color: "peach" | "neutral" | "green";
   message: string;
 }
 
 export const defaultFinancialProfile: FinancialProfile = {
-  name: "Marina",
+  name: "Você",
   mainGoal: "Criar uma reserva",
   civilStatus: "Solteiro(a)",
   financialMoment: "Apertado",
-  monthlyIncome: 6800,
-  otherIncome: 1400,
-  fixedExpenses: 2980,
-  variableExpenses: 1380,
-  debtTotal: 12480,
-  debtMonthlyPayments: 740,
+  monthlyIncome: 0,
+  otherIncome: 0,
+  fixedExpenses: 0,
+  variableExpenses: 0,
+  debtTotal: 0,
+  debtMonthlyPayments: 0,
   debtType: "Cartão de crédito",
-  goalAmount: 10000,
-  currentSavings: 6800,
+  goalAmount: 0,
+  currentSavings: 0,
+  accumulatedNetWorth: 0,
+  netWorthGoal: 0,
   updatedAt: new Date().toISOString(),
 };
 
@@ -72,8 +76,8 @@ export const calculateFinancialHealth = (data: FinancialProfile): FinancialHealt
   if (data.currentSavings <= 0) score -= 8;
   score = Math.max(0, Math.min(100, Math.round(score)));
 
-  if (score < 35) return { score, label: "Crítica", color: "peach", message: "Seu orçamento pede proteção imediata. O primeiro passo é interromper o crescimento das dívidas." };
-  if (score < 55) return { score, label: "Atenção", color: "peach", message: "Existe pressão no mês, mas pequenas decisões já podem devolver espaço e previsibilidade." };
+  if (score < 35) return { score, label: "Precisa de cuidado", color: "peach", message: "Este momento pede acolhimento e proteção. Comece por uma decisão pequena que reduza a pressão do próximo mês." };
+  if (score < 55) return { score, label: "Atenção", color: "peach", message: "Existe pressão no mês, mas isso não define sua capacidade. Pequenas decisões podem devolver espaço e previsibilidade." };
   if (score < 75) return { score, label: "Estável", color: "neutral", message: "Sua base está se formando. Agora vale direcionar o saldo com intenção." };
   return { score, label: "Saudável", color: "green", message: "Você tem margem para acelerar metas sem comprometer a segurança do mês." };
 };

@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Bot, ChevronDown, Flag, Gamepad2, HandCoins, Heart, LayoutDashboard, Menu, Plus, ReceiptText, Settings, Target, X } from "lucide-react";
+import { Bot, ChevronDown, Flag, Gamepad2, HandCoins, Heart, LayoutDashboard, Menu, Plus, ReceiptText, Settings, Target, X } from "lucide-react";
 import { useState } from "react";
 import { Button, Logo } from "./ui";
 import { useFinancialProfile } from "@/lib/financial-storage";
 import LegalFooter from "./legal-footer";
+import TransactionModal from "./transaction-modal";
+import { useGamification } from "@/lib/gamification-storage";
 
 const links = [
   ["/dashboard", "Visão geral", LayoutDashboard],
@@ -21,7 +23,10 @@ const links = [
 export default function AppShell({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const [transactionOpen, setTransactionOpen] = useState(false);
   const { profile } = useFinancialProfile();
+  const { state: gamification } = useGamification();
+  const journeyProgress = gamification.missions.length ? gamification.missions.filter((mission)=>mission.completed).length / gamification.missions.length * 100 : 0;
   const initials = (profile.name || "Você").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return (
     <div className="min-h-screen bg-[#f7f7f3]">
@@ -38,7 +43,7 @@ export default function AppShell({ children, title, subtitle }: { children: Reac
           })}
         </nav>
         <div className="absolute inset-x-5 bottom-5">
-          <div className="mb-4 rounded-2xl bg-mist p-4"><p className="text-xs font-extrabold text-forest">Seu recomeço</p><div className="mt-2 h-2 rounded-full bg-white"><div className="h-2 w-[72%] rounded-full bg-forest" /></div><p className="mt-2 text-[11px] text-ink/45">Você concluiu 72% do seu plano</p></div>
+          <div className="mb-4 rounded-2xl bg-mist p-4"><p className="text-xs font-extrabold text-forest">Jornada da semana</p><div className="mt-2 h-2 rounded-full bg-white"><div className="h-2 rounded-full bg-forest" style={{width:`${journeyProgress}%`}} /></div><p className="mt-2 text-[11px] text-ink/45">{gamification.missions.filter((mission)=>mission.completed).length} de {gamification.missions.length} missões concluídas</p></div>
           <Link href="/settings" className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold ${path === "/settings" ? "bg-forest text-white" : "text-ink/55"}`}><Settings size={19} />Configurações</Link>
         </div>
       </aside>
@@ -47,11 +52,12 @@ export default function AppShell({ children, title, subtitle }: { children: Reac
         <header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-ink/8 bg-[#f7f7f3]/90 px-5 backdrop-blur-xl sm:px-8">
           <button className="lg:hidden" onClick={() => setOpen(true)}><Menu /></button>
           <div className="min-w-0"><h1 className="truncate font-display text-2xl sm:text-3xl">{title}</h1>{subtitle && <p className="hidden text-xs text-ink/45 sm:block">{subtitle}</p>}</div>
-          <div className="ml-auto flex items-center gap-2"><button className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-ink/55"><Bell size={19} /></button><Button className="hidden sm:flex"><Plus size={17} /> Nova movimentação</Button><Button className="!px-3 sm:hidden"><Plus size={18} /></Button></div>
+          <div className="ml-auto flex items-center gap-2"><Button onClick={()=>setTransactionOpen(true)} className="hidden sm:flex"><Plus size={17} /> Nova movimentação</Button><Button aria-label="Nova movimentação" onClick={()=>setTransactionOpen(true)} className="!px-3 sm:hidden"><Plus size={18} /></Button></div>
         </header>
         <main className="p-5 sm:p-8">{children}</main>
         <LegalFooter />
       </div>
+      <TransactionModal open={transactionOpen} onClose={()=>setTransactionOpen(false)}/>
     </div>
   );
 }

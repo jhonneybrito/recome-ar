@@ -38,11 +38,12 @@ export function Button({ children, variant = "primary", className = "", ...props
   );
 }
 
-export function Input({ label, className = "", ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+export function Input({ label, className = "", type, step, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  const numericStep = type === "number" ? step ?? "0.01" : step;
   return (
     <label className="grid gap-2 text-sm font-bold text-ink/80">
       {label}
-      <input className={`focus-ring w-full rounded-2xl border border-ink/10 bg-white px-4 py-3.5 font-medium placeholder:text-ink/35 ${className}`} {...props} />
+      <input type={type} step={numericStep} className={`focus-ring w-full rounded-2xl border border-ink/10 bg-white px-4 py-3.5 font-medium placeholder:text-ink/35 ${className}`} {...props} />
     </label>
   );
 }

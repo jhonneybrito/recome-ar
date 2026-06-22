@@ -1,31 +1,5 @@
 "use client";
-
-import { CalendarDays, Flag, PiggyBank, Target } from "lucide-react";
-import AppShell from "./app-shell";
-import { Card, Pill, ProgressBar } from "./ui";
-import { calculateMonthlyBalance, estimateGoalTime, formatDuration, getEstimatedDate } from "@/lib/financial-calculations";
-import { useFinancialProfile } from "@/lib/financial-storage";
-
-const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-export default function GoalsPage() {
-  const { profile } = useFinancialProfile();
-  const balance = calculateMonthlyBalance(profile);
-  const contribution = Math.max(0, balance * 0.7);
-  const months = estimateGoalTime(profile.goalAmount, profile.currentSavings, contribution);
-  const date = getEstimatedDate(months);
-  const progress = profile.goalAmount > 0 ? Math.min(100, profile.currentSavings / profile.goalAmount * 100) : 100;
-
-  return (
-    <AppShell title="Metas" subtitle="Sua projeção muda automaticamente quando renda, despesas ou objetivo mudam.">
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
-        <Card className="bg-forest p-8 text-white"><div className="flex items-center justify-between"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-white/10"><Flag/></span><Pill tone="peach">{profile.mainGoal}</Pill></div><h2 className="mt-8 font-display text-4xl">{money(profile.currentSavings)} de {money(profile.goalAmount)}</h2><p className="mt-2 text-sm text-white/50">Progresso construído até agora</p><div className="mt-7"><ProgressBar value={progress} color="bg-light"/></div><div className="mt-3 flex justify-between text-xs font-bold"><span>{progress.toFixed(0)}% concluído</span><span>{money(contribution)}/mês</span></div></Card>
-        <div className="grid gap-5">
-          <Card><CalendarDays className="text-forest"/><p className="mt-5 text-xs font-bold text-ink/40">Data estimada</p><p className="mt-2 font-display text-3xl">{date ? new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric"}).format(date) : "Aguardando saldo"}</p><p className="mt-2 text-xs text-ink/45">{formatDuration(months)}</p></Card>
-          <Card className="bg-light"><PiggyBank className="text-forest"/><p className="mt-5 text-xs font-bold text-ink/40">Falta acumular</p><p className="mt-2 font-display text-3xl">{money(Math.max(0,profile.goalAmount-profile.currentSavings))}</p></Card>
-        </div>
-        <Card className="p-7 lg:col-span-2"><div className="flex items-center gap-3"><Target className="text-forest"/><h2 className="font-display text-3xl">Como esta projeção foi calculada</h2></div><p className="mt-4 max-w-3xl text-sm leading-7 text-ink/55">O Recomeçar direciona 70% do saldo mensal positivo para sua meta e mantém 30% como margem ou aceleração de dívidas. Hoje isso representa {money(contribution)} por mês. Se o saldo estiver negativo, a projeção fica pausada até o orçamento voltar ao equilíbrio.</p></Card>
-      </div>
-    </AppShell>
-  );
-}
+import { CalendarDays,Flag,Pencil,Plus,Trash2 } from "lucide-react";import{useState}from"react";import AppShell from"./app-shell";import GoalModal from"./goal-modal";import{Button,Card,Pill,ProgressBar}from"./ui";import{useGoals,type GoalRecord}from"@/lib/goals-storage";import{estimateGoalTime,formatDuration}from"@/lib/financial-calculations";
+const money=(v:number)=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+export default function GoalsPage(){const{goals,removeGoal}=useGoals();const[open,setOpen]=useState(false);const[editing,setEditing]=useState<GoalRecord|null>(null);const totalTarget=goals.reduce((s,g)=>s+g.target,0);const totalCurrent=goals.reduce((s,g)=>s+g.current,0);
+return <AppShell title="Metas" subtitle="Transforme desejos em passos possíveis, respeitando o momento que você vive."><div className="grid gap-5"><div className="grid gap-4 sm:grid-cols-3"><Card className="bg-forest text-white"><p className="text-xs text-white/45">Total das metas</p><p className="mt-2 font-display text-4xl">{money(totalTarget)}</p></Card><Card><p className="text-xs text-ink/40">Já acumulado</p><p className="mt-2 font-display text-4xl">{money(totalCurrent)}</p></Card><Card className="bg-light"><p className="text-xs text-ink/40">Progresso geral</p><p className="mt-2 font-display text-4xl">{totalTarget?Math.min(100,totalCurrent/totalTarget*100).toFixed(0):0}%</p></Card></div><Card className="p-6"><div className="flex flex-wrap justify-between gap-4"><div><h2 className="font-display text-3xl">Minhas metas</h2><p className="text-sm text-ink/45">{goals.length} objetivos cadastrados</p></div><Button onClick={()=>{setEditing(null);setOpen(true)}}><Plus size={16}/>Nova meta</Button></div><div className="mt-6 grid gap-4 md:grid-cols-2">{goals.length===0?<div className="py-14 text-center md:col-span-2"><p className="text-ink/45">Uma meta pode começar pequena. Escolha algo que traria mais tranquilidade para sua vida.</p><Button className="mt-4" onClick={()=>setOpen(true)}>Criar primeira meta</Button></div>:goals.map(g=>{const progress=g.target?Math.min(100,g.current/g.target*100):100;const months=estimateGoalTime(g.target,g.current,g.monthlyContribution);return <div key={g.id} className="rounded-[24px] border border-ink/8 p-5"><div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-mist text-forest"><Flag size={18}/></span><div><b>{g.name}</b><p className="text-xs text-ink/40">{g.category}</p></div><div className="ml-auto flex gap-3"><button onClick={()=>{setEditing(g);setOpen(true)}} aria-label={`Editar ${g.name}`}><Pencil size={16}/></button><button onClick={()=>{if(window.confirm(`Quer remover a meta “${g.name}”? Seus avanços continuam sendo seus, mesmo que a prioridade tenha mudado.`))removeGoal(g.id)}} aria-label={`Excluir ${g.name}`}><Trash2 size={16}/></button></div></div><p className="mt-5 text-sm">{money(g.current)} de {money(g.target)}</p><div className="mt-3"><ProgressBar value={progress}/></div><div className="mt-3 flex justify-between text-xs text-ink/45"><span>{progress.toFixed(0)}%</span><span><CalendarDays size={13} className="mr-1 inline"/>{formatDuration(months)}</span></div></div>})}</div></Card></div><GoalModal open={open} goal={editing} onClose={()=>{setOpen(false);setEditing(null)}}/></AppShell>}

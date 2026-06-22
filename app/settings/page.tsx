@@ -1,2 +1,2 @@
-import ModulePage from "@/components/module-page";
-export default function Page(){ return <ModulePage type="settings"/>; }
+import SettingsPage from "@/components/settings-page";
+export default function Page(){ return <SettingsPage/>; }

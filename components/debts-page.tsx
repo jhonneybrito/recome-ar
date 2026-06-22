@@ -1,29 +1,7 @@
 "use client";
-
-import { CalendarClock, CreditCard, HandCoins, TrendingDown } from "lucide-react";
-import AppShell from "./app-shell";
-import { Card, Pill, ProgressBar } from "./ui";
-import { calculateMonthlyBalance, estimateDebtPayoffTime, formatDuration, getEstimatedDate } from "@/lib/financial-calculations";
-import { useFinancialProfile } from "@/lib/financial-storage";
-
-const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-export default function DebtsPage() {
-  const { profile } = useFinancialProfile();
-  const balance = calculateMonthlyBalance(profile);
-  const extra = Math.max(0, balance * 0.3);
-  const currentMonths = estimateDebtPayoffTime(profile.debtTotal, profile.debtMonthlyPayments);
-  const plannedMonths = estimateDebtPayoffTime(profile.debtTotal, profile.debtMonthlyPayments + extra);
-  const savedMonths = currentMonths !== null && plannedMonths !== null ? Math.max(0, currentMonths - plannedMonths) : 0;
-  const payoffDate = getEstimatedDate(plannedMonths);
-
-  return (
-    <AppShell title="Dívidas" subtitle="Prazos calculados com o total e as parcelas informados no onboarding.">
-      <div className="grid gap-5 md:grid-cols-3">
-        <Card className="bg-forest p-7 text-white md:col-span-2"><p className="text-xs font-bold text-white/50">Total em aberto</p><p className="mt-2 font-display text-5xl">{money(profile.debtTotal)}</p><div className="mt-7 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-white/45">Parcelas atuais</p><b className="mt-1 block text-xl">{money(profile.debtMonthlyPayments)}/mês</b></div><div className="rounded-2xl bg-white/10 p-4"><p className="text-xs text-white/45">Previsão no plano</p><b className="mt-1 block text-xl">{payoffDate ? new Intl.DateTimeFormat("pt-BR",{month:"short",year:"numeric"}).format(payoffDate) : "Sem previsão"}</b></div></div></Card>
-        <Card className="p-7"><HandCoins className="text-forest"/><p className="mt-5 text-xs font-bold text-ink/40">Aceleração possível</p><p className="mt-1 font-display text-3xl text-forest">+ {money(extra)}</p><p className="mt-2 text-sm leading-6 text-ink/50">por mês, preservando 70% do saldo para sua meta e margem.</p></Card>
-        <Card className="p-7 md:col-span-3"><div className="flex flex-wrap items-center justify-between gap-4"><div><h2 className="font-display text-3xl">Caminho de quitação</h2><p className="mt-1 text-sm text-ink/45">{profile.debtType}</p></div><Pill tone={profile.debtTotal > 0 ? "peach" : "green"}>{profile.debtTotal > 0 ? "Em andamento" : "Sem dívidas"}</Pill></div><div className="mt-7 grid gap-4 md:grid-cols-3"><div className="rounded-2xl bg-cream p-5"><CreditCard className="text-forest"/><p className="mt-4 text-xs font-bold text-ink/40">Ritmo atual</p><b className="mt-1 block text-xl">{formatDuration(currentMonths)}</b></div><div className="rounded-2xl bg-mist p-5"><TrendingDown className="text-forest"/><p className="mt-4 text-xs font-bold text-ink/40">Com o plano</p><b className="mt-1 block text-xl">{formatDuration(plannedMonths)}</b></div><div className="rounded-2xl bg-light p-5"><CalendarClock className="text-forest"/><p className="mt-4 text-xs font-bold text-ink/40">Tempo recuperado</p><b className="mt-1 block text-xl">{savedMonths} {savedMonths === 1 ? "mês" : "meses"}</b></div></div><div className="mt-7"><div className="mb-2 flex justify-between text-xs font-bold"><span>Compromisso mensal sugerido</span><span>{money(profile.debtMonthlyPayments + extra)}</span></div><ProgressBar value={profile.debtTotal ? Math.min(100,(profile.debtMonthlyPayments+extra)/profile.debtTotal*100*12) : 100}/></div></Card>
-      </div>
-    </AppShell>
-  );
-}
+import { CreditCard,Pencil,Plus,Trash2 } from "lucide-react";
+import { useState } from "react";
+import AppShell from "./app-shell";import DebtModal from "./debt-modal";import{Button,Card,Pill,ProgressBar}from"./ui";import{useDebts,type DebtRecord}from"@/lib/debts-storage";import{estimateDebtPayoffTime,formatDuration}from"@/lib/financial-calculations";
+const money=(v:number)=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+export default function DebtsPage(){const{debts,removeDebt}=useDebts();const[open,setOpen]=useState(false);const[editing,setEditing]=useState<DebtRecord|null>(null);const total=debts.reduce((s,d)=>s+Math.max(0,d.total-d.paid),0);const monthly=debts.reduce((s,d)=>s+d.monthlyPayment,0);const months=estimateDebtPayoffTime(total,monthly);
+return <AppShell title="Dívidas" subtitle="Olhar para os compromissos com clareza é um passo de cuidado, não de culpa."><div className="grid gap-5"><div className="grid gap-4 sm:grid-cols-3"><Card className="bg-forest text-white"><p className="text-xs text-white/45">Total em aberto</p><p className="mt-2 font-display text-4xl">{money(total)}</p></Card><Card><p className="text-xs text-ink/40">Parcelas mensais</p><p className="mt-2 font-display text-4xl">{money(monthly)}</p></Card><Card className="bg-light"><p className="text-xs text-ink/40">Prazo estimado</p><p className="mt-2 font-display text-3xl">{formatDuration(months)}</p></Card></div><Card className="p-6"><div className="flex flex-wrap justify-between gap-4"><div><h2 className="font-display text-3xl">Minhas dívidas</h2><p className="text-sm text-ink/45">{debts.length} registros</p></div><Button onClick={()=>{setEditing(null);setOpen(true)}}><Plus size={16}/>Nova dívida</Button></div><div className="mt-6 grid gap-4">{debts.length===0?<div className="py-14 text-center"><p className="text-ink/45">Se você não tem dívidas, isso também é uma conquista. Se tem, cadastre sem culpa para enxergar o caminho.</p><Button className="mt-4" onClick={()=>setOpen(true)}>Cadastrar dívida</Button></div>:debts.map(d=>{const remaining=Math.max(0,d.total-d.paid);const progress=d.total?d.paid/d.total*100:100;return <div key={d.id} className="rounded-2xl border border-ink/8 p-5"><div className="flex flex-wrap items-center gap-4"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-peach/20"><CreditCard size={18}/></span><div><b>{d.name}</b><p className="text-xs text-ink/40">{d.type} · {d.interestRate}% a.m.</p></div><div className="ml-auto text-right"><b>{money(remaining)}</b><p className="text-xs text-ink/40">{money(d.monthlyPayment)}/mês</p></div><button onClick={()=>{setEditing(d);setOpen(true)}} aria-label={`Editar ${d.name}`}><Pencil size={16}/></button><button onClick={()=>{if(window.confirm(`Quer remover “${d.name}”? Faça isso apenas se a dívida não fizer mais parte da sua realidade.`))removeDebt(d.id)}} aria-label={`Excluir ${d.name}`}><Trash2 size={16}/></button></div><div className="mt-4"><ProgressBar value={progress}/></div></div>})}</div></Card></div><DebtModal open={open} debt={editing} onClose={()=>{setOpen(false);setEditing(null)}}/></AppShell>}

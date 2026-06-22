@@ -1,97 +1,163 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Bot, CalendarDays, CheckCircle2, Lightbulb, PiggyBank, ShieldCheck, Sparkles, Target } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import AppShell from "./app-shell";
 import { Card, Pill } from "./ui";
-import {
-  calculateAnnualProjection, calculateFinancialHealth, calculateIncomeCommitment,
-  calculateMonthlyBalance, calculateMonthlyExpenses, calculateTotalIncome,
-  estimateDebtPayoffTime, estimateGoalTime, formatDuration, getEstimatedDate,
-} from "@/lib/financial-calculations";
 import { useFinancialProfile } from "@/lib/financial-storage";
+import { useTransactions } from "@/lib/transactions-storage";
+import { useDebts } from "@/lib/debts-storage";
+import { useGoals } from "@/lib/goals-storage";
+import {
+  calculateAnnualProjection,
+  calculateFinancialHealth,
+  calculateIncomeCommitment,
+  estimateDebtPayoffTime,
+  estimateGoalTime,
+  formatDuration,
+} from "@/lib/financial-calculations";
 
-const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const dateText = (date: Date | null) => date ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date) : "Ainda sem data";
+const money = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function FinancialReport() {
   const { profile } = useFinancialProfile();
-  const income = calculateTotalIncome(profile);
-  const expenses = calculateMonthlyExpenses(profile);
-  const balance = calculateMonthlyBalance(profile);
-  const commitment = calculateIncomeCommitment(profile);
-  const health = calculateFinancialHealth(profile);
-  const annual = calculateAnnualProjection(profile);
-  const goalContribution = Math.max(0, balance * 0.7);
-  const extraDebtPayment = Math.max(0, balance * 0.3);
-  const goalMonths = estimateGoalTime(profile.goalAmount, profile.currentSavings, goalContribution);
-  const debtMonths = estimateDebtPayoffTime(profile.debtTotal, profile.debtMonthlyPayments + extraDebtPayment);
-  const potentialMonthlySaving = Math.max(0, profile.variableExpenses * 0.1);
+  const { transactions } = useTransactions();
+  const { debts } = useDebts();
+  const { goals } = useGoals();
+  const month = new Date().toISOString().slice(0, 7);
+  const items = transactions.filter((transaction) => transaction.date.startsWith(month));
+  const incomeItems = items.filter((transaction) => transaction.type === "income");
+  const expenseItems = items.filter((transaction) => transaction.type === "expense");
+  const income = incomeItems.length
+    ? incomeItems.reduce((sum, transaction) => sum + transaction.amount, 0)
+    : profile.monthlyIncome + profile.otherIncome;
+  const expenses = expenseItems.length
+    ? expenseItems.reduce((sum, transaction) => sum + transaction.amount, 0)
+    : profile.fixedExpenses + profile.variableExpenses;
+  const hasIncompleteMonth = incomeItems.length === 0 || expenseItems.length === 0;
+  const debtTotal = debts.reduce((sum, debt) => sum + Math.max(0, debt.total - debt.paid), 0);
+  const payments = debts.reduce((sum, debt) => sum + debt.monthlyPayment, 0);
+  const data = {
+    ...profile,
+    monthlyIncome: income,
+    otherIncome: 0,
+    fixedExpenses: 0,
+    variableExpenses: expenses,
+    debtTotal,
+    debtMonthlyPayments: payments,
+  };
+  const balance = income - expenses - payments;
+  const health = calculateFinancialHealth(data);
+  const commitment = calculateIncomeCommitment(data);
+  const annual = calculateAnnualProjection(data);
+  const goal = goals[0];
+  const goalMonths = goal
+    ? estimateGoalTime(goal.target, goal.current, goal.monthlyContribution)
+    : null;
+  const debtMonths = estimateDebtPayoffTime(debtTotal, payments + Math.max(0, balance * 0.3));
 
-  const emotionalMessage = balance < 0
-    ? `${profile.name}, estar no negativo não define sua capacidade. Seu plano começa recuperando ${money(Math.abs(balance))} de espaço mensal, sem tentar resolver tudo de uma vez.`
-    : commitment > 80
-      ? `${profile.name}, seu mês está muito comprometido. Há progresso possível, mas ele precisa começar com proteção e menos pressão.`
-      : `${profile.name}, existe espaço real no seu orçamento. Agora o desafio é dar destino ao saldo antes que ele desapareça nas urgências do mês.`;
-
-  const steps = balance <= 0
-    ? [
-        ["1", "Interromper o déficit", `Reduza ao menos ${money(Math.min(Math.abs(balance) + potentialMonthlySaving, expenses * 0.1))} nos gastos variáveis para voltar ao zero.`],
-        ["2", "Proteger as parcelas", `Mantenha ${money(profile.debtMonthlyPayments)} reservado no início do mês para evitar juros e atrasos.`],
-        ["3", "Criar uma margem mínima", "Depois do equilíbrio, guarde o primeiro valor livre antes de antecipar qualquer meta."],
-      ]
-    : [
-        ["1", "Proteger o mês", `Mantenha ${money(balance * 0.3)} como margem para imprevistos e decisões reais.`],
-        ["2", profile.debtTotal > 0 ? "Acelerar a dívida" : "Fortalecer sua reserva", profile.debtTotal > 0 ? `Use ${money(extraDebtPayment)} extras por mês. A estimativa de quitação passa a ser ${formatDuration(debtMonths)}.` : `Direcione ${money(goalContribution)} por mês para sua meta.`],
-        ["3", `Avançar em “${profile.mainGoal}”`, `Com ${money(goalContribution)} mensais, a data estimada é ${dateText(getEstimatedDate(goalMonths))}.`],
-      ];
+  const nextSteps = [
+    balance < 0
+      ? "Escolher uma despesa possível de revisar, sem tentar mudar tudo de uma vez."
+      : "Separar uma parte do saldo antes de assumir novos gastos.",
+    debtTotal > 0
+      ? "Olhar primeiro para a dívida com maior taxa, preservando o essencial."
+      : "Manter espaço no orçamento para evitar novas dívidas.",
+    goal
+      ? "Criar um lembrete gentil para a contribuição mensal da meta."
+      : "Cadastrar uma primeira meta pequena e significativa.",
+  ];
 
   return (
-    <AppShell title="Relatório Financeiro Real" subtitle="Diagnóstico gerado com os dados salvos no seu onboarding.">
+    <AppShell
+      title="Relatório Financeiro Real"
+      subtitle="Uma leitura acolhedora dos seus registros, compromissos e objetivos."
+    >
       <div className="mx-auto grid max-w-6xl gap-5">
-        <Card className="overflow-hidden bg-forest p-8 text-white sm:p-10">
-          <div className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
-            <div><Pill tone={health.color}><Sparkles size={13} className="mr-1"/> Saúde {health.label.toLowerCase()}</Pill><h2 className="mt-5 max-w-3xl font-display text-4xl sm:text-5xl">Seu foco agora é {balance >= 0 ? "transformar saldo em direção." : "recuperar espaço no mês."}</h2><p className="mt-4 max-w-3xl leading-7 text-white/60">{emotionalMessage}</p></div>
-            <span className="grid h-16 w-16 shrink-0 place-items-center rounded-3xl bg-white/10"><Bot size={28}/></span>
+        {hasIncompleteMonth && (
+          <div className="rounded-2xl border border-sage/35 bg-mist/70 p-4 text-sm text-forest">
+            Ainda faltam alguns registros deste mês. Para não deixar sua visão vazia, usamos os
+            valores do seu planejamento inicial onde necessário.
           </div>
+        )}
+
+        <Card className="bg-forest p-8 text-white">
+          <Pill tone={health.color}>
+            <Sparkles size={13} className="mr-1" />
+            Saúde {health.label}
+          </Pill>
+          <h2 className="mt-5 font-display text-5xl">
+            {balance >= 0
+              ? "Seu mês tem espaço para escolhas."
+              : "Seu mês pede um pouco mais de cuidado."}
+          </h2>
+          <p className="mt-4 max-w-3xl text-white/60">{health.message}</p>
         </Card>
 
-        <div className="grid gap-5 md:grid-cols-3">
-          <Card><p className="text-xs font-bold text-ink/40">Comprometimento da renda</p><p className="mt-2 font-display text-4xl">{commitment.toFixed(0)}%</p><p className="mt-2 text-xs text-ink/45">{commitment > 80 ? "Ponto de atenção prioritário" : "Dentro de uma faixa administrável"}</p></Card>
-          <Card><p className="text-xs font-bold text-ink/40">Economia potencial</p><p className="mt-2 font-display text-4xl text-forest">{money(potentialMonthlySaving)}<span className="text-sm">/mês</span></p><p className="mt-2 text-xs text-ink/45">reduzindo 10% dos gastos variáveis</p></Card>
-          <Card><p className="text-xs font-bold text-ink/40">Saldo anual no plano</p><p className="mt-2 font-display text-4xl">{money(annual.planned.balance)}</p><p className="mt-2 text-xs text-ink/45">{money(annual.potentialSavings)} acima do cenário atual</p></Card>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <p className="text-xs text-ink/40">Saldo mensal</p>
+            <p className="mt-2 font-display text-4xl">{money(balance)}</p>
+          </Card>
+          <Card>
+            <p className="text-xs text-ink/40">Comprometimento</p>
+            <p className="mt-2 font-display text-4xl">{commitment.toFixed(0)}%</p>
+          </Card>
+          <Card>
+            <p className="text-xs text-ink/40">Saldo anual projetado</p>
+            <p className="mt-2 font-display text-4xl">{money(annual.current.balance)}</p>
+          </Card>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-2">
           <Card className="p-7">
-            <div className="flex items-center gap-3"><AlertTriangle className="text-peach"/><h2 className="font-display text-3xl">Pontos de atenção</h2></div>
-            <ul className="mt-6 grid gap-4 text-sm leading-6 text-ink/60">
-              <li className="flex gap-3"><span>•</span><span>{commitment.toFixed(0)}% da renda já está comprometida antes de novas escolhas.</span></li>
-              <li className="flex gap-3"><span>•</span><span>{profile.debtTotal > 0 ? `Há ${money(profile.debtTotal)} em dívidas, com ${money(profile.debtMonthlyPayments)} de parcelas mensais.` : "Você não informou dívidas ativas."}</span></li>
-              <li className="flex gap-3"><span>•</span><span>{balance > 0 ? `${money(balance)} ficam livres por mês, mas precisam de destino para não virarem gasto invisível.` : `O mês fecha com déficit de ${money(Math.abs(balance))}.`}</span></li>
+            <h2 className="font-display text-3xl">Dados considerados</h2>
+            <ul className="mt-5 grid gap-3 text-sm text-ink/60">
+              <li>Receitas do mês: <b>{money(income)}</b></li>
+              <li>Despesas do mês: <b>{money(expenses)}</b></li>
+              <li>Dívidas em aberto: <b>{money(debtTotal)}</b></li>
+              <li>Parcelas mensais: <b>{money(payments)}</b></li>
             </ul>
           </Card>
           <Card className="bg-mist p-7">
-            <div className="flex items-center gap-3"><Lightbulb className="text-forest"/><h2 className="font-display text-3xl">Oportunidades</h2></div>
-            <ul className="mt-6 grid gap-4 text-sm leading-6 text-ink/60">
-              <li className="flex gap-3"><CheckCircle2 className="mt-1 shrink-0 text-forest" size={16}/><span>Uma redução de 10% nos gastos variáveis libera {money(potentialMonthlySaving)} por mês.</span></li>
-              <li className="flex gap-3"><CheckCircle2 className="mt-1 shrink-0 text-forest" size={16}/><span>Sua meta de {money(profile.goalAmount)} pode ser alcançada em {formatDuration(goalMonths)}.</span></li>
-              <li className="flex gap-3"><CheckCircle2 className="mt-1 shrink-0 text-forest" size={16}/><span>O cenário anual planejado melhora o saldo em {money(annual.potentialSavings)}.</span></li>
+            <h2 className="font-display text-3xl">Previsões</h2>
+            <ul className="mt-5 grid gap-3 text-sm text-ink/60">
+              <li>Quitação das dívidas: <b>{formatDuration(debtMonths)}</b></li>
+              <li>
+                {goal
+                  ? <>Meta “{goal.name}”: <b>{formatDuration(goalMonths)}</b></>
+                  : "Cadastre uma meta para gerar sua previsão."}
+              </li>
+              <li>Patrimônio atual: <b>{money(profile.accumulatedNetWorth)}</b></li>
             </ul>
           </Card>
         </div>
 
         <Card className="p-7">
-          <h2 className="font-display text-3xl">Próximos passos personalizados</h2>
-          <div className="mt-6 grid gap-4">{steps.map(([number,title,text])=><div key={number} className="flex gap-5 rounded-2xl border border-ink/8 p-5"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-light font-display text-xl">{number}</span><div><h3 className="font-display text-2xl">{title}</h3><p className="mt-2 text-sm leading-6 text-ink/55">{text}</p></div></div>)}</div>
+          <h2 className="font-display text-3xl">Próximos passos</h2>
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            {nextSteps.map((text, index) => (
+              <div key={text} className="rounded-2xl bg-cream p-5">
+                <b className="font-display text-2xl text-peach">0{index + 1}</b>
+                <p className="mt-3 text-sm leading-6 text-ink/60">{text}</p>
+              </div>
+            ))}
+          </div>
         </Card>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Card className="p-7"><PiggyBank className="text-forest"/><p className="mt-5 text-xs font-bold text-ink/40">Meta principal</p><h3 className="mt-2 font-display text-3xl">{profile.mainGoal}</h3><p className="mt-3 text-sm text-ink/55">Estimativa: {formatDuration(goalMonths)} · {dateText(getEstimatedDate(goalMonths))}</p></Card>
-          <Card className="p-7"><CalendarDays className="text-forest"/><p className="mt-5 text-xs font-bold text-ink/40">Quitação das dívidas</p><h3 className="mt-2 font-display text-3xl">{formatDuration(debtMonths)}</h3><p className="mt-3 text-sm text-ink/55">{debtMonths === 0 ? "Nenhuma dívida informada." : `Previsão: ${dateText(getEstimatedDate(debtMonths))}`}</p></Card>
+        <div className="rounded-[28px] border border-dashed border-forest/25 bg-mist/50 p-6 text-center">
+          <ShieldCheck className="mx-auto text-forest" />
+          <p className="mt-3 text-sm font-bold">
+            Análises educativas e informativas. Você decide o que faz sentido para sua realidade.
+          </p>
+          <Link
+            href="/transactions"
+            className="mt-4 inline-flex items-center gap-2 text-sm font-extrabold text-forest"
+          >
+            Atualizar movimentações <ArrowRight size={16} />
+          </Link>
         </div>
-
-        <div className="rounded-[28px] border border-dashed border-forest/25 bg-mist/50 p-6 text-center"><ShieldCheck className="mx-auto text-forest"/><p className="mt-3 text-sm font-bold">As análises têm caráter exclusivamente educativo e informativo. Não constituem consultoria financeira, recomendação de investimento ou garantia de resultado. As decisões financeiras permanecem sob responsabilidade do usuário.</p><Link href="/onboarding" className="mt-4 inline-flex items-center gap-2 text-sm font-extrabold text-forest">Atualizar meus dados <ArrowRight size={16}/></Link></div>
       </div>
     </AppShell>
   );

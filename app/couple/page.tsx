@@ -1,2 +1,2 @@
-import ModulePage from "@/components/module-page";
-export default function Page(){ return <ModulePage type="couple"/>; }
+import CouplePage from "@/components/couple-page";
+export default function Page(){ return <CouplePage/>; }

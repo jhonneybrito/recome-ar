@@ -7,6 +7,8 @@ import { Button, Input, Logo } from "@/components/ui";
 import { defaultFinancialProfile, type FinancialProfile, type MainGoal } from "@/lib/financial-calculations";
 import { loadFinancialProfile, saveFinancialProfile } from "@/lib/financial-storage";
 import LegalFooter from "@/components/legal-footer";
+import { loadDebts, saveDebts } from "@/lib/debts-storage";
+import { loadGoals, saveGoals } from "@/lib/goals-storage";
 
 const goals: [typeof Home, MainGoal, string][] = [
   [Home, "Sair das dívidas", "Quero voltar a respirar"],
@@ -30,7 +32,11 @@ export default function Onboarding() {
   const setNumber = (field: keyof FinancialProfile, value: string) =>
     setData((current) => ({ ...current, [field]: numberValue(value) }));
 
-  const finish = () => saveFinancialProfile({ ...data, updatedAt: new Date().toISOString() });
+  const finish = () => {
+    saveFinancialProfile({ ...data, updatedAt: new Date().toISOString() });
+    if (data.debtTotal > 0 && loadDebts().length === 0) saveDebts([{ id: crypto.randomUUID(), name: data.debtType || "Dívida inicial", type: data.debtType || "Outro", total: data.debtTotal, paid: 0, monthlyPayment: data.debtMonthlyPayments, interestRate: 0 }]);
+    if (data.goalAmount > 0 && loadGoals().length === 0) saveGoals([{ id: crypto.randomUUID(), name: data.mainGoal, category: "Objetivo principal", target: data.goalAmount, current: data.currentSavings, monthlyContribution: 0, targetDate: "" }]);
+  };
 
   return (
     <div className="bg-cream"><main className="min-h-screen">
@@ -44,7 +50,7 @@ export default function Onboarding() {
 
           {step === 3 && <><p className="eyebrow">Sua realidade mensal</p><h1 className="mt-4 font-display text-5xl">Quanto entra e quanto precisa sair?</h1><p className="mt-4 text-ink/55">Use valores médios. Todos os relatórios serão calculados a partir daqui.</p><div className="mt-9 grid gap-5 sm:grid-cols-2"><Input label="Renda mensal líquida (R$)" type="number" min="0" value={data.monthlyIncome} onChange={(e)=>setNumber("monthlyIncome",e.target.value)}/><Input label="Outras rendas (R$)" type="number" min="0" value={data.otherIncome} onChange={(e)=>setNumber("otherIncome",e.target.value)}/><Input label="Gastos fixos (R$)" type="number" min="0" value={data.fixedExpenses} onChange={(e)=>setNumber("fixedExpenses",e.target.value)}/><Input label="Gastos variáveis (R$)" type="number" min="0" value={data.variableExpenses} onChange={(e)=>setNumber("variableExpenses",e.target.value)}/></div></>}
 
-          {step === 4 && <><p className="eyebrow">Dívidas e objetivo</p><h1 className="mt-4 font-display text-5xl">O que pesa hoje e para onde você quer ir?</h1><div className="mt-9 grid gap-5 sm:grid-cols-2"><Input label="Total de dívidas (R$)" type="number" min="0" value={data.debtTotal} onChange={(e)=>setNumber("debtTotal",e.target.value)}/><Input label="Parcelas mensais (R$)" type="number" min="0" value={data.debtMonthlyPayments} onChange={(e)=>setNumber("debtMonthlyPayments",e.target.value)}/><label className="grid gap-2 text-sm font-bold text-ink/80 sm:col-span-2">Tipo principal<select value={data.debtType} onChange={(e)=>setData({...data,debtType:e.target.value})} className="focus-ring rounded-2xl border border-ink/10 bg-white px-4 py-3.5"><option>Cartão de crédito</option><option>Empréstimo</option><option>Financiamento</option><option>Não tenho dívidas</option></select></label><Input label="Valor da sua meta (R$)" type="number" min="0" value={data.goalAmount} onChange={(e)=>setNumber("goalAmount",e.target.value)}/><Input label="Quanto já guardou (R$)" type="number" min="0" value={data.currentSavings} onChange={(e)=>setNumber("currentSavings",e.target.value)}/></div></>}
+          {step === 4 && <><p className="eyebrow">Dívidas, patrimônio e objetivo</p><h1 className="mt-4 font-display text-5xl">O que pesa hoje e o que você já construiu?</h1><p className="mt-4 text-ink/55">Patrimônio é a soma aproximada de dinheiro guardado, investimentos, imóveis e outros bens, descontadas as dívidas.</p><div className="mt-9 grid gap-5 sm:grid-cols-2"><Input label="Total de dívidas (R$)" type="number" min="0" value={data.debtTotal} onChange={(e)=>setNumber("debtTotal",e.target.value)}/><Input label="Parcelas mensais (R$)" type="number" min="0" value={data.debtMonthlyPayments} onChange={(e)=>setNumber("debtMonthlyPayments",e.target.value)}/><label className="grid gap-2 text-sm font-bold text-ink/80 sm:col-span-2">Tipo principal<select value={data.debtType} onChange={(e)=>setData({...data,debtType:e.target.value})} className="focus-ring rounded-2xl border border-ink/10 bg-white px-4 py-3.5"><option>Cartão de crédito</option><option>Empréstimo</option><option>Financiamento</option><option>Não tenho dívidas</option></select></label><Input label="Valor da sua meta (R$)" type="number" min="0" value={data.goalAmount} onChange={(e)=>setNumber("goalAmount",e.target.value)}/><Input label="Quanto já guardou para a meta (R$)" type="number" min="0" value={data.currentSavings} onChange={(e)=>setNumber("currentSavings",e.target.value)}/><Input label="Patrimônio acumulado hoje (R$)" type="number" min="0" value={data.accumulatedNetWorth} onChange={(e)=>setNumber("accumulatedNetWorth",e.target.value)}/><Input label="Meta de patrimônio (R$)" type="number" min="0" value={data.netWorthGoal} onChange={(e)=>setNumber("netWorthGoal",e.target.value)}/></div></>}
 
           {step === 5 && <div className="rounded-[36px] bg-white p-8 text-center shadow-soft sm:p-12"><span className="mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-mist text-forest"><Sparkles/></span><p className="eyebrow mt-7">Tudo pronto</p><h1 className="mt-3 font-display text-5xl">Seu diagnóstico será realmente seu.</h1><p className="mx-auto mt-4 max-w-lg leading-7 text-ink/55">Saldo, saúde financeira, prazo das dívidas, metas e projeções serão calculados com os dados que você informou.</p><Link href="/dashboard" onClick={finish}><Button className="mt-8 px-8 py-4">Gerar meu diagnóstico <ArrowRight size={17}/></Button></Link></div>}
 
