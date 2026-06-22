@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Bot, CalendarClock, CircleDollarSign, HeartPulse, Landmark, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Bot, CalendarClock, Flag, HeartPulse, Landmark, Trophy, Wallet } from "lucide-react";
 import AppShell from "@/components/app-shell";
-import { CashFlowChart } from "@/components/charts";
 import { Card, Pill, ProgressBar } from "@/components/ui";
 import {
   calculateAnnualProjection, calculateDebtMonthlyPayments, calculateDebtTotal,
@@ -12,12 +11,15 @@ import {
   estimateDebtPayoffTime, estimateGoalTime, formatDuration, getEstimatedDate,
 } from "@/lib/financial-calculations";
 import { useFinancialProfile } from "@/lib/financial-storage";
+import GamificationSummary from "@/components/gamification-summary";
+import { useGamification } from "@/lib/gamification-storage";
 
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const monthYear = (date: Date | null) => date ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date) : "depende de criar saldo mensal";
 
 export default function Dashboard() {
   const { profile } = useFinancialProfile();
+  const { state: gamification } = useGamification();
   const income = calculateTotalIncome(profile);
   const expenses = calculateMonthlyExpenses(profile);
   const payments = calculateDebtMonthlyPayments(profile);
@@ -29,12 +31,6 @@ export default function Dashboard() {
   const goalMonths = estimateGoalTime(profile.goalAmount, profile.currentSavings, goalContribution);
   const payoffMonths = estimateDebtPayoffTime(debt, payments + Math.max(0, balance * 0.3));
   const annual = calculateAnnualProjection(profile);
-
-  const flow = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"].map((month, index) => ({
-    month,
-    entradas: Math.round(income * (0.96 + index * 0.008)),
-    saidas: Math.round((expenses + payments) * (1.04 - index * 0.008)),
-  }));
 
   const future = [1, 3, 5].map((years) => ({
     years,
@@ -56,8 +52,17 @@ export default function Dashboard() {
         <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
           <div className="grid gap-5">
             <Card className="p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-2xl">Fluxo calculado</h2><p className="mt-1 text-xs text-ink/40">Tendência baseada na sua renda e nos compromissos atuais</p></div><Pill tone="neutral">Saldo: {money(balance)}</Pill></div>
-              <div className="mt-6"><CashFlowChart data={flow}/></div>
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-2xl">Evolução das metas principais</h2><p className="mt-1 text-xs text-ink/40">Uma visão rápida do que está avançando agora</p></div><Link href="/goals" className="flex items-center gap-1 text-xs font-extrabold text-forest">Ver detalhes <ArrowRight size={14}/></Link></div>
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                {[
+                  { title: profile.mainGoal, current: profile.currentSavings, target: profile.goalAmount, progress: profile.goalAmount > 0 ? profile.currentSavings / profile.goalAmount * 100 : 100, note: `${money(profile.currentSavings)} de ${money(profile.goalAmount)}`, icon: Flag, color: "bg-forest" },
+                  { title: "Quitar dívidas", current: Math.max(0, debt - payments), target: debt || 1, progress: debt > 0 ? Math.min(100, payments / debt * 100) : 100, note: debt > 0 ? `${money(debt)} em aberto` : "Nenhuma dívida informada", icon: Landmark, color: "bg-peach" },
+                  { title: "Missões da semana", current: gamification.missions.filter((mission) => mission.completed).length, target: gamification.missions.length, progress: gamification.missions.filter((mission) => mission.completed).length / gamification.missions.length * 100, note: `${gamification.missions.filter((mission) => mission.completed).length} de ${gamification.missions.length} concluídas`, icon: Trophy, color: "bg-light" },
+                ].map((goal) => {
+                  const Icon = goal.icon;
+                  return <div key={goal.title} className="rounded-[22px] border border-ink/8 bg-cream/60 p-5"><div className="flex items-center justify-between"><span className={`grid h-10 w-10 place-items-center rounded-2xl ${goal.color} ${goal.color === "bg-forest" ? "text-white" : "text-ink"}`}><Icon size={18}/></span><b className="text-sm text-forest">{Math.min(100,goal.progress).toFixed(0)}%</b></div><h3 className="mt-5 font-display text-xl">{goal.title}</h3><p className="mb-3 mt-1 text-xs text-ink/45">{goal.note}</p><ProgressBar value={goal.progress} color={goal.color}/></div>;
+                })}
+              </div>
             </Card>
 
             <Card className="p-6">
@@ -71,6 +76,7 @@ export default function Dashboard() {
           </div>
 
           <aside className="grid content-start gap-5">
+            <GamificationSummary />
             <Card className="bg-forest p-6 text-white">
               <div className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10"><HeartPulse/></span><Pill tone={health.color}>{health.score}/100</Pill></div>
               <p className="mt-6 text-xs font-bold uppercase tracking-widest text-white/45">Saúde financeira</p><h2 className="mt-2 font-display text-4xl">{health.label}</h2><p className="mt-3 text-sm leading-6 text-white/60">{health.message}</p>

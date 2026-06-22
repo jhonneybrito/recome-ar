@@ -27,6 +27,10 @@ Enquanto o Supabase não está conectado, o onboarding persiste os dados no `loc
 
 As funções ficam em `lib/financial-calculations.ts` e a persistência em `lib/financial-storage.ts`.
 
+## Jornada semanal e gamificação
+
+A rota `/journey` oferece quatro missões financeiras semanais. Ao concluir ações, o usuário acumula pontos, avança de nível, desbloqueia conquistas e constrói uma sequência de semanas completas. O progresso é persistido no `localStorage` por `lib/gamification-storage.ts`.
+
 ## Jurídico e LGPD
 
 O MVP inclui:

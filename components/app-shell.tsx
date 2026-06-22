@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Bot, ChevronDown, CreditCard, Flag, HandCoins, Heart, LayoutDashboard, Menu, Plus, ReceiptText, Settings, Target, X } from "lucide-react";
+import { Bell, Bot, ChevronDown, Flag, Gamepad2, HandCoins, Heart, LayoutDashboard, Menu, Plus, ReceiptText, Settings, Target, X } from "lucide-react";
 import { useState } from "react";
 import { Button, Logo } from "./ui";
 import { useFinancialProfile } from "@/lib/financial-storage";
@@ -13,6 +13,7 @@ const links = [
   ["/transactions", "Movimentações", ReceiptText],
   ["/debts", "Dívidas", HandCoins],
   ["/goals", "Metas", Target],
+  ["/journey", "Jornada semanal", Gamepad2],
   ["/couple", "Plano a Dois", Heart],
   ["/ai-plan", "Meu plano IA", Bot],
 ];
