@@ -1,2 +1,123 @@
-# recome-ar
-Inteligência financeira para a vida real.
+# Recomeçar
+
+Aplicação SaaS de organização financeira pessoal e para casais, construída com Next.js, TypeScript e Tailwind CSS. O projeto inclui dados demonstrativos e está preparado para integrações com Supabase, Stripe e inteligência artificial.
+
+## Tecnologias
+
+- Next.js 15 com App Router
+- React 19
+- TypeScript
+- Tailwind CSS
+- Supabase
+- Stripe
+- Recharts
+
+## Requisitos
+
+- Node.js 20 ou superior
+- npm
+
+## Executar localmente
+
+```bash
+npm install
+```
+
+Crie o arquivo local de variáveis:
+
+```bash
+cp .env.example .env.local
+```
+
+No Windows:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Inicie o ambiente de desenvolvimento:
+
+```bash
+npm run dev
+```
+
+Acesse [http://localhost:3000](http://localhost:3000).
+
+As páginas demonstrativas funcionam sem serviços externos configurados. O endpoint de IA retorna um plano simulado quando não há chave, e o checkout Stripe retorna uma resposta de demonstração.
+
+## Validar a produção
+
+```bash
+npm run typecheck
+npm run build
+npm run start
+```
+
+## Deploy na Vercel
+
+1. Envie esta pasta para um repositório Git.
+2. Na Vercel, clique em **Add New > Project** e importe o repositório.
+3. Mantenha o framework detectado como **Next.js**.
+4. Use os padrões:
+   - Install Command: `npm install`
+   - Build Command: `npm run build`
+   - Output Directory: padrão do Next.js
+5. Cadastre as variáveis necessárias em **Settings > Environment Variables**.
+6. Faça o deploy.
+
+A Vercel detecta automaticamente a URL pública pelo valor de `VERCEL_URL`. `NEXT_PUBLIC_APP_URL` é opcional, mas pode ser definido com o domínio canônico de produção, por exemplo `https://recomecar.com`.
+
+## Variáveis de ambiente
+
+| Variável | Uso | Necessária para a demonstração |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase | Não |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública do Supabase | Não |
+| `SUPABASE_SERVICE_ROLE_KEY` | Operações administrativas no servidor | Não |
+| `STRIPE_SECRET_KEY` | Criação de sessões de checkout | Não |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe no navegador | Não |
+| `STRIPE_WEBHOOK_SECRET` | Validação de webhooks Stripe | Não |
+| `OPENAI_API_KEY` | Geração do plano financeiro por IA | Não |
+| `NEXT_PUBLIC_APP_URL` | Domínio canônico da aplicação | Não |
+
+Nunca exponha `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` ou `OPENAI_API_KEY` em código executado no navegador.
+
+## Supabase
+
+1. Crie um projeto no Supabase.
+2. Execute [`supabase/schema.sql`](supabase/schema.sql) no SQL Editor.
+3. Configure a URL e as chaves nas variáveis de ambiente.
+4. Ative os provedores de autenticação desejados.
+
+O schema inclui perfis, movimentações, dívidas, metas, casais, metas compartilhadas, planos de IA, assinaturas e políticas de Row Level Security.
+
+## Stripe
+
+1. Crie os produtos Individual e Plano a Dois.
+2. Configure as chaves do Stripe.
+3. Envie o Price ID para `POST /api/stripe/checkout`.
+4. Configure um webhook antes de ativar assinaturas reais.
+
+## Inteligência artificial
+
+O endpoint `POST /api/ai-plan` mantém a chave no servidor. Sem `OPENAI_API_KEY`, ele usa um fallback demonstrativo para que a aplicação continue navegável.
+
+## Rotas
+
+- `/`
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/onboarding`
+- `/dashboard`
+- `/transactions`
+- `/debts`
+- `/goals`
+- `/couple`
+- `/ai-plan`
+- `/settings`
+
+## Aviso
+
+O plano inteligente oferece conteúdo educacional e não substitui orientação financeira profissional.
+
