@@ -55,15 +55,54 @@ npm run start
 
 ## Deploy na Vercel
 
-1. Envie esta pasta para um repositório Git.
+### Pasta raiz obrigatória
+
+A raiz do projeto na Vercel deve ser exatamente a pasta que contém estes arquivos:
+
+```text
+recomecar/
+├── app/
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── dashboard/page.tsx
+│   ├── login/page.tsx
+│   ├── register/page.tsx
+│   └── onboarding/page.tsx
+├── components/
+├── lib/
+├── package.json
+├── package-lock.json
+├── next.config.mjs
+└── vercel.json
+```
+
+Neste workspace, essa pasta é:
+
+```text
+outputs/recomecar
+```
+
+Não selecione a pasta superior `files-mentioned-by-the-user-recomecar`, pois ela contém somente as pastas auxiliares `outputs` e `work`. Se o repositório Git tiver essa estrutura completa, configure **Root Directory** como:
+
+```text
+outputs/recomecar
+```
+
+Se enviar apenas o conteúdo da pasta `recomecar` para o repositório, deixe **Root Directory** vazio.
+
+### Passos
+
+1. Envie a pasta correta para um repositório Git.
 2. Na Vercel, clique em **Add New > Project** e importe o repositório.
-3. Mantenha o framework detectado como **Next.js**.
+3. Em **Root Directory**, escolha `outputs/recomecar` somente se essa subpasta existir no repositório.
+4. Confirme que o framework detectado é **Next.js**.
 4. Use os padrões:
    - Install Command: `npm install`
    - Build Command: `npm run build`
    - Output Directory: padrão do Next.js
-5. Cadastre as variáveis necessárias em **Settings > Environment Variables**.
-6. Faça o deploy.
+5. Não configure `public`, `out` ou `.next` como Output Directory.
+6. Cadastre as variáveis necessárias em **Settings > Environment Variables**.
+7. Faça um novo deploy com **Redeploy > Clear build cache and redeploy**.
 
 A Vercel detecta automaticamente a URL pública pelo valor de `VERCEL_URL`. `NEXT_PUBLIC_APP_URL` é opcional, mas pode ser definido com o domínio canônico de produção, por exemplo `https://recomecar.com`.
 
@@ -120,4 +159,3 @@ O endpoint `POST /api/ai-plan` mantém a chave no servidor. Sem `OPENAI_API_KEY`
 ## Aviso
 
 O plano inteligente oferece conteúdo educacional e não substitui orientação financeira profissional.
-
