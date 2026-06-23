@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { deleteGoalDb, getGoalsDb, saveGoalDb } from "./db";
 
 export interface GoalRecord {
   id: string;
@@ -29,8 +30,8 @@ function syncPatrimony(items:GoalRecord[]){
 export function useGoals(){
   const[goals,setGoals]=useState<GoalRecord[]>([]);
   const[initialized,setInitialized]=useState(false);const[ready,setReady]=useState(false);
-  useEffect(()=>{const sync=()=>{setGoals(loadGoals());setInitialized(hasStoredGoals());setReady(true)};sync();window.addEventListener("storage",sync);window.addEventListener("recomecar:goals-updated",sync);return()=>{window.removeEventListener("storage",sync);window.removeEventListener("recomecar:goals-updated",sync)}},[]);
-  const upsertGoal=useCallback((goal:Omit<GoalRecord,"id">,id?:string)=>{const current=loadGoals();const next=id?current.map((item)=>item.id===id?{...goal,id}:item):[{...goal,id:crypto.randomUUID()},...current];setGoals(next);saveGoals(next);syncPatrimony(next)},[]);
-  const removeGoal=useCallback((id:string)=>{const next=loadGoals().filter((item)=>item.id!==id);setGoals(next);saveGoals(next)},[]);
+  useEffect(()=>{const sync=()=>{setGoals(loadGoals());setInitialized(hasStoredGoals());setReady(true)};sync();getGoalsDb().then((remote)=>{if(remote){setGoals(remote);setInitialized(true);setReady(true);saveGoals(remote);syncPatrimony(remote)}}).catch(console.error);window.addEventListener("storage",sync);window.addEventListener("recomecar:goals-updated",sync);return()=>{window.removeEventListener("storage",sync);window.removeEventListener("recomecar:goals-updated",sync)}},[]);
+  const upsertGoal=useCallback(async(goal:Omit<GoalRecord,"id">,id?:string)=>{if(await saveGoalDb(goal,id)){const remote=await getGoalsDb();if(remote){setGoals(remote);saveGoals(remote);syncPatrimony(remote)}return}const current=loadGoals();const next=id?current.map((item)=>item.id===id?{...goal,id}:item):[{...goal,id:crypto.randomUUID()},...current];setGoals(next);saveGoals(next);syncPatrimony(next)},[]);
+  const removeGoal=useCallback(async(id:string)=>{if(await deleteGoalDb(id)){const remote=await getGoalsDb();if(remote){setGoals(remote);saveGoals(remote);syncPatrimony(remote)}return}const next=loadGoals().filter((item)=>item.id!==id);setGoals(next);saveGoals(next)},[]);
   return{goals,upsertGoal,removeGoal,initialized,ready};
 }

@@ -178,9 +178,35 @@ Nunca exponha `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_
 1. Crie um projeto no Supabase.
 2. Execute [`supabase/schema.sql`](supabase/schema.sql) no SQL Editor.
 3. Configure a URL e as chaves nas variáveis de ambiente.
-4. Ative os provedores de autenticação desejados.
+4. Em **Authentication > Providers**, mantenha Email habilitado.
+5. Em **Authentication > URL Configuration**, configure:
+   - Site URL: domínio publicado na Vercel;
+   - Redirect URLs: `http://localhost:3000/**` e `https://seu-dominio.vercel.app/**`.
+6. O SQL cria o bucket público `avatars`, as políticas para cada usuário gerenciar somente sua pasta e o gatilho que cria o perfil após o cadastro.
 
-O schema inclui perfis, movimentações, dívidas, metas, casais, metas compartilhadas, planos de IA, assinaturas e políticas de Row Level Security.
+O schema inclui perfis, movimentações, dívidas, metas, competências mensais, recorrências, reuniões do casal e políticas de Row Level Security. Ele também possui compatibilidade com a estrutura inicial já distribuída.
+
+### Autenticação e persistência
+
+Quando `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` estão configuradas:
+
+- cadastro, login, logout, sessão e recuperação de senha usam Supabase Auth;
+- as rotas privadas são protegidas pelo middleware;
+- perfil, movimentações, dívidas, metas, avatar e pautas do casal usam Supabase;
+- o `localStorage` funciona somente como cache de interface.
+
+Sem essas variáveis, o projeto continua navegável localmente em modo de demonstração. Esse fallback não deve ser usado como autenticação de produção.
+
+### Testar Auth
+
+1. Cadastre uma conta em `/register`.
+2. Se a confirmação de e-mail estiver habilitada, confirme o endereço recebido.
+3. Entre em `/login`.
+4. Confirme que `/dashboard` abre e que o botão **Sair** retorna para `/login`.
+5. Abra uma janela anônima e confirme que `/dashboard` redireciona para `/login`.
+6. Entre com a mesma conta na janela anônima para validar o acesso entre navegadores.
+
+Nunca use `SUPABASE_SERVICE_ROLE_KEY` no navegador. O projeto cliente utiliza somente a chave anônima, protegida por RLS.
 
 ## Stripe
 

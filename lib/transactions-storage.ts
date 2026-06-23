@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { deleteTransactionDb, getTransactionsDb, saveTransactionDb } from "./db";
 
 export type TransactionType = "income" | "expense";
 
@@ -53,6 +54,7 @@ export function useTransactions() {
       setReady(true);
     };
     sync();
+    getTransactionsDb().then((remote) => { if (remote) { setTransactions(remote); setInitialized(true); setReady(true); saveTransactions(remote); } }).catch(console.error);
     window.addEventListener("storage", sync);
     window.addEventListener("recomecar:transactions-updated", sync);
     return () => {
@@ -61,20 +63,29 @@ export function useTransactions() {
     };
   }, []);
 
-  const addTransaction = useCallback((transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
+  const addTransaction = useCallback(async (transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
+    if (await saveTransactionDb(transaction)) {
+      const remote = await getTransactionsDb(); if (remote) { setTransactions(remote); saveTransactions(remote); } return;
+    }
     const current = loadTransactions();
     const next = [{ ...transaction, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...current];
     setTransactions(next);
     saveTransactions(next);
   }, []);
 
-  const removeTransaction = useCallback((id: string) => {
+  const removeTransaction = useCallback(async (id: string) => {
+    if (await deleteTransactionDb(id)) {
+      const remote = await getTransactionsDb(); if (remote) { setTransactions(remote); saveTransactions(remote); } return;
+    }
     const next = loadTransactions().filter((transaction) => transaction.id !== id);
     setTransactions(next);
     saveTransactions(next);
   }, []);
 
-  const updateTransaction = useCallback((id: string, transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
+  const updateTransaction = useCallback(async (id: string, transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
+    if (await saveTransactionDb(transaction, id)) {
+      const remote = await getTransactionsDb(); if (remote) { setTransactions(remote); saveTransactions(remote); } return;
+    }
     const next = loadTransactions().map((item) => item.id === id ? { ...item, ...transaction } : item);
     setTransactions(next);
     saveTransactions(next);

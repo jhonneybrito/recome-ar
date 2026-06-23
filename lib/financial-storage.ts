@@ -5,6 +5,7 @@ import { defaultFinancialProfile, type FinancialProfile } from "./financial-calc
 import { hasStoredTransactions, saveTransactions, type FinancialTransaction } from "./transactions-storage";
 import { hasStoredDebts, saveDebts } from "./debts-storage";
 import { hasStoredGoals, saveGoals } from "./goals-storage";
+import { getProfileDb, saveProfileDb } from "./db";
 
 const STORAGE_KEY = "recomecar:financial-profile:v1";
 
@@ -71,6 +72,13 @@ export function useFinancialProfile() {
       migrateProfileToRecords(storedProfile);
     };
     sync();
+    getProfileDb().then((remote) => {
+      if (remote) {
+        const next = { ...loadFinancialProfile(), ...remote };
+        setProfile(next);
+        saveFinancialProfile(next);
+      }
+    }).catch(console.error);
     setReady(true);
     window.addEventListener("storage", sync);
     window.addEventListener("recomecar:profile-updated", sync);
@@ -83,6 +91,7 @@ export function useFinancialProfile() {
   const updateProfile = useCallback((next: FinancialProfile) => {
     setProfile(next);
     saveFinancialProfile(next);
+    saveProfileDb(next).catch(console.error);
   }, []);
 
   return { profile, updateProfile, ready };

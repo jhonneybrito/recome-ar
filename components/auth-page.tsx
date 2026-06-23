@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Check, Circle, Quote } from "lucide-react";
 import { useState } from "react";
 import LegalFooter from "./legal-footer";
 import { Button, Input, Logo } from "./ui";
+import { isSupabaseConfigured, resetPassword, signIn, signUp } from "@/lib/auth";
 
 export default function AuthPage({ mode }: { mode: "login" | "register" | "forgot" }) {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function AuthPage({ mode }: { mode: "login" | "register" | "forgo
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const content = {
     login: { title: "Que bom ter você de volta.", subtitle: "Entre para continuar cuidando dos seus planos.", action: "Entrar", footer: <>Ainda não tem uma conta? <Link className="font-extrabold text-forest" href="/register">Comece grátis</Link></> },
@@ -32,33 +35,42 @@ export default function AuthPage({ mode }: { mode: "login" | "register" | "forgo
       ? validEmail && validPassword
       : validEmail;
 
-  const hashPassword = async (value: string) => {
-    const bytes = new TextEncoder().encode(value);
-    const digest = await crypto.subtle.digest("SHA-256", bytes);
-    return Array.from(new Uint8Array(digest)).map((byte)=>byte.toString(16).padStart(2,"0")).join("");
-  };
-
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!allowed) return;
     setError("");
+    setSuccess("");
+    setSubmitting(true);
+    try {
     if (mode === "register") {
       window.localStorage.setItem("recomecar:consent:v1", JSON.stringify({ terms: true, marketing, acceptedAt: new Date().toISOString() }));
-      window.localStorage.setItem("recomecar:registration:v1", JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), passwordHash: await hashPassword(password), createdAt: new Date().toISOString() }));
-      router.push("/onboarding");
+      if (isSupabaseConfigured) {
+        const data = await signUp(name.trim(), email.trim().toLowerCase(), password);
+        if (data.session) router.push("/onboarding");
+        else setSuccess("Conta criada. Confira seu e-mail para confirmar o acesso antes de entrar.");
+      } else {
+        window.localStorage.setItem("recomecar:registration:v1", JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), createdAt: new Date().toISOString() }));
+        router.push("/onboarding");
+      }
       return;
     }
     if (mode === "login") {
-      const registration = JSON.parse(window.localStorage.getItem("recomecar:registration:v1") || "{}");
-      if (registration.email !== email.trim().toLowerCase() || registration.passwordHash !== await hashPassword(password)) {
-        setError("Não conseguimos reconhecer esses dados neste navegador. Confira com calma ou crie sua conta aqui.");
-        return;
-      }
-      window.localStorage.setItem("recomecar:session:v1", JSON.stringify({ email: registration.email, signedInAt: new Date().toISOString() }));
+      if (isSupabaseConfigured) await signIn(email.trim().toLowerCase(), password);
       router.push("/dashboard");
+      router.refresh();
       return;
     }
-    window.location.href = `mailto:suporte@recomecar.app?subject=${encodeURIComponent("Recuperação de acesso")}&body=${encodeURIComponent(`Solicito ajuda para recuperar o acesso do e-mail ${email.trim()}.`)}`;
+    if (isSupabaseConfigured) {
+      await resetPassword(email.trim());
+      setSuccess("Enviamos o link de recuperação. Confira sua caixa de entrada.");
+    } else {
+      setError("Configure o Supabase para habilitar a recuperação de senha.");
+    }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível concluir. Tente novamente.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const Requirement = ({ valid, children }: { valid: boolean; children: React.ReactNode }) => (
@@ -101,8 +113,9 @@ export default function AuthPage({ mode }: { mode: "login" | "register" | "forgo
               )}
 
               {mode === "login" && <div className="-mt-2 text-right"><Link href="/forgot-password" className="text-xs font-bold text-forest">Esqueci minha senha</Link></div>}
-              <Button type="submit" disabled={!allowed} className="w-full py-4 disabled:cursor-not-allowed disabled:opacity-45">{content.action}<ArrowRight size={17}/></Button>
+              <Button type="submit" disabled={!allowed || submitting} className="w-full py-4 disabled:cursor-not-allowed disabled:opacity-45">{submitting ? "Aguarde..." : content.action}<ArrowRight size={17}/></Button>
               {error && <p role="alert" className="rounded-2xl bg-peach/15 p-3 text-center text-xs font-bold text-[#8a4c2d]">{error}</p>}
+              {success && <p role="status" className="rounded-2xl bg-mist p-3 text-center text-xs font-bold text-forest">{success}</p>}
               {mode === "register" && !allowed && <p className="-mt-2 text-center text-xs text-ink/40">Preencha todos os campos obrigatórios para criar a conta.</p>}
             </form>
             <p className="mt-7 text-center text-sm text-ink/50">{content.footer}</p>

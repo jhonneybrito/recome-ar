@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { deleteDebtDb, getDebtsDb, saveDebtDb } from "./db";
 
 export interface DebtRecord {
   id: string;
@@ -68,6 +69,7 @@ export function useDebts() {
       setReady(true);
     };
     sync();
+    getDebtsDb().then((remote)=>{if(remote){setDebts(remote);setInitialized(true);setReady(true);saveDebts(remote)}}).catch(console.error);
     window.addEventListener("storage", sync);
     window.addEventListener("recomecar:debts-updated", sync);
     return () => {
@@ -75,12 +77,13 @@ export function useDebts() {
       window.removeEventListener("recomecar:debts-updated", sync);
     };
   }, []);
-  const upsertDebt = useCallback((debt: Omit<DebtRecord,"id">, id?: string) => {
+  const upsertDebt = useCallback(async (debt: Omit<DebtRecord,"id">, id?: string) => {
+    if(await saveDebtDb(debt,id)){const remote=await getDebtsDb();if(remote){setDebts(remote);saveDebts(remote)}return}
     const current = loadDebts();
     const normalized = debt.isCurrentPriority ? current.map((item)=>({...item,isCurrentPriority:false})) : current;
     const next = id ? normalized.map((item)=>item.id===id?{...debt,id}:item) : [{...debt,id:crypto.randomUUID()},...normalized];
     setDebts(next); saveDebts(next);
   },[]);
-  const removeDebt = useCallback((id:string)=>{const next=loadDebts().filter((item)=>item.id!==id);setDebts(next);saveDebts(next)},[]);
+  const removeDebt = useCallback(async(id:string)=>{if(await deleteDebtDb(id)){const remote=await getDebtsDb();if(remote){setDebts(remote);saveDebts(remote)}return}const next=loadDebts().filter((item)=>item.id!==id);setDebts(next);saveDebts(next)},[]);
   return { debts, upsertDebt, removeDebt, initialized, ready };
 }

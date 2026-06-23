@@ -126,3 +126,28 @@ O dashboard e o relatório conseguiam usar os valores agregados do onboarding, m
 
 - A foto permanece limitada ao armazenamento local do navegador; produção deve usar Supabase Storage.
 - Perfil, patrimônio, prioridades e pautas precisam de tabelas e sincronização no Supabase para múltiplos dispositivos.
+
+## Supabase Auth e banco real — 23 de junho de 2026
+
+### Implementado
+
+- Cadastro, login, logout, recuperação de senha e sessão com Supabase Auth.
+- Middleware protegendo dashboard, movimentações, dívidas, metas, Plano a Dois, configurações, relatório e onboarding.
+- Nome, e-mail e avatar do usuário autenticado exibidos no menu.
+- CRUDs de movimentações, dívidas e metas usando Supabase como fonte principal.
+- Perfil, patrimônio, avatar e pautas do casal persistidos no Supabase.
+- Onboarding grava perfil e registros financeiros iniciais vinculados ao usuário autenticado.
+- `localStorage` mantido apenas como cache/fallback quando o Supabase não está configurado.
+- Schema completo com RLS, índices, competências mensais, recorrências, reuniões do casal e bucket `avatars`.
+- Migração compatível com colunas do schema inicial.
+
+### Validação local
+
+- TypeScript aprovado.
+- `npm run build` aprovado.
+- 22 páginas e middleware gerados.
+- Fallback sem credenciais continua navegável para desenvolvimento.
+
+### Validação que exige o projeto Supabase
+
+Este workspace não contém as credenciais configuradas na Vercel. Após executar `supabase/schema.sql`, validar cadastro com confirmação de e-mail, login em outro navegador, recuperação de senha, upload real no Storage e RLS entre duas contas distintas.

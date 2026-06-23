@@ -8,6 +8,7 @@ import { useFinancialProfile } from "@/lib/financial-storage";
 import { useTransactions } from "@/lib/transactions-storage";
 import { getPriorityDebt, useDebts } from "@/lib/debts-storage";
 import { useGoals } from "@/lib/goals-storage";
+import { saveCoupleMeetingDb } from "@/lib/db";
 
 const KEY = "recomecar:couple:v1";
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -67,6 +68,7 @@ export default function CouplePage() {
     try {
       const previous = JSON.parse(localStorage.getItem(KEY) || "{}");
       localStorage.setItem(KEY, JSON.stringify({ ...previous, partner, ritual, agendas, agendasUpdatedAt: new Date().toISOString() }));
+      saveCoupleMeetingDb(agendas).catch(console.error);
     } catch {}
   }, [agendas, partner, ritual]);
 
