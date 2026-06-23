@@ -52,7 +52,7 @@ export function migrateProfileToRecords(profile: FinancialProfile) {
   }
 
   if (!hasStoredDebts()) {
-    saveDebts(profile.debtTotal > 0 ? [{ id: crypto.randomUUID(), name: profile.debtType || "Dívida inicial", type: profile.debtType || "Outro", total: profile.debtTotal, paid: 0, monthlyPayment: profile.debtMonthlyPayments, interestRate: 0 }] : []);
+    saveDebts(profile.debtTotal > 0 ? [{ id: crypto.randomUUID(), name: profile.debtType || "Dívida inicial", type: profile.debtType || "Outro", total: profile.debtTotal, paid: 0, monthlyPayment: profile.debtMonthlyPayments, interestRate: 0, priorityType: "Maior juros", urgencyReason: "", isCurrentPriority: false }] : []);
   }
 
   if (!hasStoredGoals()) {

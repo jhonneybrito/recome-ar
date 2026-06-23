@@ -88,3 +88,41 @@ O dashboard e o relatório conseguiam usar os valores agregados do onboarding, m
 - Edição e salvamento de movimentação, dívida e meta foram executados no navegador sem duplicação.
 - Exclusões foram verificadas na implementação, incluindo atualização do `localStorage` e evento de sincronização; nenhum dado real foi apagado durante a auditoria.
 - TypeScript e build de produção aprovados.
+
+## Perfil, patrimônio, dívidas e Plano a Dois — 23 de junho de 2026
+
+### Problemas encontrados
+
+- O avatar do perfil era sempre formado pelas iniciais e não aceitava fotografia.
+- Metas da categoria Patrimônio não atualizavam `accumulatedNetWorth` e `netWorthGoal` do perfil.
+- Dívidas não possuíam contexto de prioridade emocional ou urgência.
+- O Plano a Dois salvava apenas nome e ritual, sem utilizar dados financeiros nas conversas.
+
+### Correções realizadas
+
+- Upload de foto com pré-visualização, limite de 2 MB, troca, remoção e persistência base64 no `localStorage`.
+- Avatar da barra lateral conectado à foto, com retorno automático às iniciais quando não houver imagem.
+- Meta de Patrimônio usa rótulos específicos para patrimônio existente e meta patrimonial.
+- Ao salvar ou editar uma meta patrimonial, o perfil e o dashboard são atualizados imediatamente.
+- Card patrimonial mostra valor atual, meta e percentual calculado por `patrimônio atual / meta`.
+- Dívidas receberam tipo de prioridade, motivo opcional de urgência e marcação de Prioridade atual.
+- Dívida emocional/urgente prevalece na recomendação quando não existe marcação manual.
+- A dívida recomendada aparece no topo com contexto humano e financeiro.
+- Plano a Dois gera exatamente três pautas a partir de receitas, despesas, saldo, dívidas e metas reais.
+- As pautas são persistidas junto às configurações do casal e recalculadas quando os dados mudam.
+
+### Testes
+
+- Controles de escolher, trocar e remover foto presentes; fallback de iniciais preservado.
+- Formulário patrimonial alterna corretamente para “Meta de patrimônio” e “Patrimônio existente hoje”.
+- Campos de prioridade, urgência e Prioridade atual presentes e editáveis.
+- Dívida recomendada exibida no topo.
+- Três pautas reais geradas com dívida, receitas, despesas e meta existentes.
+- Layout sem rolagem horizontal em 375 px nas telas Configurações, Dívidas, Plano a Dois e Metas.
+- TypeScript aprovado.
+- `npm run build` aprovado com 22 páginas.
+
+### Dependências futuras de backend
+
+- A foto permanece limitada ao armazenamento local do navegador; produção deve usar Supabase Storage.
+- Perfil, patrimônio, prioridades e pautas precisam de tabelas e sincronização no Supabase para múltiplos dispositivos.

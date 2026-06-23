@@ -62,7 +62,7 @@ export default function Dashboard() {
             ["Saldo mensal", money(balance), Wallet, balance >= 0 ? "Espaço disponível no mês" : "Valor a reorganizar com calma", balance >= 0 ? "green" : "peach"],
             ["Receita mensal", money(income), ArrowUpRight, transactionsInitialized ? `${monthIncomes.length} registros no mês` : "Valor do onboarding", "green"],
             ["Despesas mensais", money(expenses), ArrowDownRight, `${income ? Math.round(expenses / income * 100) : 0}% da renda`, "peach"],
-            ["Patrimônio acumulado", money(profile.accumulatedNetWorth), Landmark, profile.netWorthGoal > 0 ? `${Math.min(100,profile.accumulatedNetWorth/profile.netWorthGoal*100).toFixed(0)}% da meta patrimonial` : "Atualize sua meta", "green"],
+            ["Patrimônio acumulado", money(profile.accumulatedNetWorth), Landmark, profile.netWorthGoal > 0 ? `Meta ${money(profile.netWorthGoal)} · ${Math.min(100,profile.accumulatedNetWorth/profile.netWorthGoal*100).toFixed(0)}%` : "Atualize sua meta", "green"],
           ].map(([label,value,Icon,note,tone]) => { const I=Icon as typeof Wallet; return <Card key={String(label)}><div className="flex items-center justify-between gap-3"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${tone==="peach"?"bg-peach/20 text-[#9a532f]":"bg-mist text-forest"}`}><I size={18}/></span><span className="text-right text-[11px] font-bold text-ink/45">{String(note)}</span></div><p className="mt-5 text-xs font-bold text-ink/40">{String(label)}</p><p className="mt-1 font-display text-2xl">{String(value)}</p></Card>})}
         </div>
 
