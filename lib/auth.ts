@@ -35,7 +35,7 @@ export async function resetPassword(email: string) {
   const supabase = createClient();
   if (!supabase) throw new Error("Supabase não está configurado.");
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/login`,
+    redirectTo: `${window.location.origin}/reset-password`,
   });
   if (error) throw error;
 }

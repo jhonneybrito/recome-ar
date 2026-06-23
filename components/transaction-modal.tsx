@@ -4,9 +4,13 @@ import { ArrowDownRight, ArrowUpRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button, Input } from "./ui";
 import { expenseCategories, incomeCategories, useTransactions, type FinancialTransaction, type TransactionType } from "@/lib/transactions-storage";
+import { FREE_LIMITS, useUserPlan } from "@/lib/plans";
+import UpgradeModal from "./upgrade-modal";
 
 export default function TransactionModal({ open, onClose, transaction = null }: { open: boolean; onClose: () => void; transaction?: FinancialTransaction | null }) {
-  const { addTransaction, updateTransaction } = useTransactions();
+  const { transactions, addTransaction, updateTransaction } = useTransactions();
+  const { isPremium } = useUserPlan();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [type, setType] = useState<TransactionType>("expense");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -35,13 +39,18 @@ export default function TransactionModal({ open, onClose, transaction = null }: 
     const numericAmount = Number(amount.replace(",", "."));
     if (!description.trim() || numericAmount <= 0) return;
     const payload = { description: description.trim(), amount: numericAmount, type, category, date };
+    const monthCount = transactions.filter((item) => item.date.startsWith(date.slice(0, 7))).length;
+    if (!transaction && !isPremium && monthCount >= FREE_LIMITS.transactionsPerMonth) {
+      setUpgradeOpen(true);
+      return;
+    }
     if (transaction) updateTransaction(transaction.id, payload);
     else addTransaction(payload);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-center bg-ink/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={transaction ? "Editar movimentação" : "Nova movimentação"}>
+    <><div className="fixed inset-0 z-[90] grid place-items-center bg-ink/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={transaction ? "Editar movimentação" : "Nova movimentação"}>
       <div className="w-full max-w-xl rounded-[30px] bg-white p-6 shadow-[0_30px_90px_rgba(16,45,39,.3)] sm:p-8">
         <div className="flex items-start justify-between"><div><p className="eyebrow">{transaction ? "Editar" : "Registrar"}</p><h2 className="mt-2 font-display text-4xl">{transaction ? "Editar movimentação" : "Nova movimentação"}</h2></div><button onClick={onClose} aria-label="Fechar" className="grid h-10 w-10 place-items-center rounded-full bg-ink/5"><X size={18}/></button></div>
         <form className="mt-7 grid gap-5" onSubmit={submit}>
@@ -54,6 +63,6 @@ export default function TransactionModal({ open, onClose, transaction = null }: 
           <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit">{transaction ? "Salvar alterações" : `Salvar ${type==="income"?"receita":"despesa"}`}</Button></div>
         </form>
       </div>
-    </div>
+    </div><UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} resource="20 lançamentos neste mês"/></>
   );
 }

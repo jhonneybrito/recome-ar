@@ -151,3 +151,14 @@ O dashboard e o relatório conseguiam usar os valores agregados do onboarding, m
 ### Validação que exige o projeto Supabase
 
 Este workspace não contém as credenciais configuradas na Vercel. Após executar `supabase/schema.sql`, validar cadastro com confirmação de e-mail, login em outro navegador, recuperação de senha, upload real no Storage e RLS entre duas contas distintas.
+
+## Etapa 2 — planos, limites e marketing
+
+- Avatar real aceita JPG/JPEG/PNG/WEBP até 5 MB no bucket `avatars`.
+- Recuperação de senha direciona para `/reset-password`, com mínimo de 8 caracteres.
+- Criada `/plans` com Gratuito, Premium Mensal de R$ 27 e Premium Anual de R$ 147.
+- Checkout Stripe usa o usuário autenticado e o webhook atualiza o plano no Supabase.
+- Limites gratuitos aplicados na interface e em triggers SQL.
+- Campo `profiles.plan` protegido contra alteração pelo próprio usuário.
+- Criada tabela `leads` com captura na landing e no cadastro.
+- Estrutura do Meta Pixel preparada para PageView, Lead, CompleteRegistration, InitiateCheckout e Purchase.

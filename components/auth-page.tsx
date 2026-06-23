@@ -7,6 +7,8 @@ import { useState } from "react";
 import LegalFooter from "./legal-footer";
 import { Button, Input, Logo } from "./ui";
 import { isSupabaseConfigured, resetPassword, signIn, signUp } from "@/lib/auth";
+import { saveLeadDb } from "@/lib/db";
+import { trackEvent } from "@/lib/marketing";
 
 export default function AuthPage({ mode }: { mode: "login" | "register" | "forgot" }) {
   const router = useRouter();
@@ -52,6 +54,8 @@ export default function AuthPage({ mode }: { mode: "login" | "register" | "forgo
         window.localStorage.setItem("recomecar:registration:v1", JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), createdAt: new Date().toISOString() }));
         router.push("/onboarding");
       }
+      await saveLeadDb(email.trim(), "register");
+      trackEvent("CompleteRegistration");
       return;
     }
     if (mode === "login") {

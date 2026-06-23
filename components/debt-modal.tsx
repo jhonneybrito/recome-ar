@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Button, Input } from "./ui";
 import { useDebts, type DebtRecord } from "@/lib/debts-storage";
+import { FREE_LIMITS, useUserPlan } from "@/lib/plans";
+import UpgradeModal from "./upgrade-modal";
 
 const priorities: DebtRecord["priorityType"][] = ["Maior juros", "Maior impacto mensal", "Menor dívida", "Dívida emocional/urgente"];
 
 export default function DebtModal({ open, onClose, debt = null }: { open: boolean; onClose: () => void; debt?: DebtRecord | null }) {
-  const { upsertDebt } = useDebts();
+  const { debts, upsertDebt } = useDebts();
+  const { isPremium } = useUserPlan();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState("Cartão de crédito");
   const [total, setTotal] = useState("");
@@ -36,6 +40,10 @@ export default function DebtModal({ open, onClose, debt = null }: { open: boolea
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (!debt && !isPremium && debts.length >= FREE_LIMITS.debts) {
+      setUpgradeOpen(true);
+      return;
+    }
     upsertDebt({
       name: name.trim(),
       type,
@@ -51,7 +59,7 @@ export default function DebtModal({ open, onClose, debt = null }: { open: boolea
   };
 
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-center bg-ink/45 p-4" role="dialog" aria-label={debt ? "Editar dívida" : "Nova dívida"}>
+    <><div className="fixed inset-0 z-[90] grid place-items-center bg-ink/45 p-4" role="dialog" aria-label={debt ? "Editar dívida" : "Nova dívida"}>
       <form onSubmit={submit} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[30px] bg-white p-7">
         <div className="flex justify-between"><div><p className="eyebrow">Dívidas</p><h2 className="mt-2 font-display text-4xl">{debt ? "Editar dívida" : "Nova dívida"}</h2></div><button type="button" onClick={onClose} aria-label="Fechar"><X/></button></div>
         <div className="mt-7 grid gap-5 sm:grid-cols-2">
@@ -67,6 +75,6 @@ export default function DebtModal({ open, onClose, debt = null }: { open: boolea
         </div>
         <div className="mt-7 flex justify-end gap-3"><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit">Salvar dívida</Button></div>
       </form>
-    </div>
+    </div><UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} resource="3 dívidas"/></>
   );
 }

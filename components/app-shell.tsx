@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, ChevronDown, Flag, Gamepad2, HandCoins, Heart, LayoutDashboard, LogOut, Menu, Plus, ReceiptText, Settings, Target, X } from "lucide-react";
+import { Bot, ChevronDown, Flag, Gamepad2, HandCoins, Heart, LayoutDashboard, LogOut, Menu, Plus, ReceiptText, Settings, Sparkles, Target, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Logo } from "./ui";
@@ -12,6 +12,7 @@ import TransactionModal from "./transaction-modal";
 import { useGamification } from "@/lib/gamification-storage";
 import { useProfilePhoto } from "@/lib/profile-photo-storage";
 import { getCurrentUser, signOut } from "@/lib/auth";
+import { useUserPlan } from "@/lib/plans";
 
 const links = [
   ["/dashboard", "Visão geral", LayoutDashboard],
@@ -21,6 +22,7 @@ const links = [
   ["/journey", "Jornada semanal", Gamepad2],
   ["/couple", "Plano a Dois", Heart],
   ["/ai-plan", "Meu plano IA", Bot],
+  ["/plans", "Planos", Sparkles],
 ];
 
 export default function AppShell({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
@@ -30,6 +32,7 @@ export default function AppShell({ children, title, subtitle }: { children: Reac
   const [transactionOpen, setTransactionOpen] = useState(false);
   const { profile } = useFinancialProfile();
   const { photo } = useProfilePhoto();
+  const { plan } = useUserPlan();
   const [accountEmail, setAccountEmail] = useState("");
   const { state: gamification } = useGamification();
   const journeyProgress = gamification.missions.length ? gamification.missions.filter((mission)=>mission.completed).length / gamification.missions.length * 100 : 0;
@@ -45,7 +48,7 @@ export default function AppShell({ children, title, subtitle }: { children: Reac
       <aside className={`fixed inset-y-0 left-0 z-40 w-72 border-r border-ink/8 bg-white p-5 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between"><Logo /><button className="lg:hidden" onClick={() => setOpen(false)}><X /></button></div>
         <div className="mt-9 rounded-2xl bg-cream p-4">
-          <div className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-peach/40 font-extrabold">{photo?<img src={photo} alt="" className="h-full w-full object-cover"/>:initials}</span><div className="min-w-0"><p className="truncate text-sm font-extrabold">{profile.name || "Seu perfil"}</p><p className="truncate text-xs text-ink/45">{accountEmail || "Plano Gratuito"}</p></div><ChevronDown className="ml-auto" size={16} /></div>
+          <div className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-peach/40 font-extrabold">{photo?<img src={photo} alt="" className="h-full w-full object-cover"/>:initials}</span><div className="min-w-0"><p className="truncate text-sm font-extrabold">{profile.name || "Seu perfil"}</p><p className="truncate text-xs text-ink/45">{accountEmail || (plan==="premium_annual"?"Premium Anual":plan==="premium_monthly"?"Premium Mensal":"Plano Gratuito")}</p></div><ChevronDown className="ml-auto" size={16} /></div>
         </div>
         <nav className="mt-7 grid gap-1">
           {links.map(([href, label, Icon]) => {

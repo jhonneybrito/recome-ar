@@ -36,8 +36,8 @@ export default function SettingsPage() {
       setPhotoError("Escolha um arquivo de imagem.");
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setPhotoError("Para funcionar neste navegador, use uma imagem de até 2 MB.");
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Use uma imagem de até 5 MB.");
       return;
     }
     const reader = new FileReader();
@@ -64,7 +64,7 @@ export default function SettingsPage() {
       <div className="mx-auto max-w-3xl">
         <Card className="p-7">
           <h2 className="font-display text-3xl">Meu perfil</h2>
-          <p className="mt-2 text-sm text-ink/45">As alterações ficam salvas neste navegador enquanto o Supabase não está conectado.</p>
+          <p className="mt-2 text-sm text-ink/45">Com o Supabase configurado, suas alterações ficam sincronizadas com sua conta; localmente, o navegador mantém um cache temporário.</p>
           <form onSubmit={submit} className="mt-8 grid gap-6 sm:grid-cols-2">
             <div className="flex flex-wrap items-center gap-5 sm:col-span-2">
               <span className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full bg-peach/35 text-2xl font-extrabold">
@@ -73,10 +73,10 @@ export default function SettingsPage() {
               <div className="grid gap-2">
                 <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-cream px-5 py-3 text-sm font-bold transition hover:bg-mist">
                   <Camera size={17}/> {preview ? "Trocar foto" : "Escolher foto"}
-                  <input className="sr-only" type="file" accept="image/*" onChange={choosePhoto}/>
+                  <input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto}/>
                 </label>
                 {preview && <button type="button" onClick={() => { setPreview(""); setPhotoError(""); }} className="inline-flex items-center justify-center gap-2 text-sm font-bold text-[#9a532f]"><Trash2 size={16}/>Remover foto</button>}
-                <p className="text-xs text-ink/40">JPG, PNG ou WebP de até 2 MB.</p>
+                <p className="text-xs text-ink/40">JPG, JPEG, PNG ou WebP de até 5 MB.</p>
                 {photoError && <p role="alert" className="text-xs font-bold text-[#9a532f]">{photoError}</p>}
               </div>
             </div>

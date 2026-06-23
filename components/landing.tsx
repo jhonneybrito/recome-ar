@@ -6,7 +6,9 @@ import {
   ShieldCheck, Sparkles, TrendingUp, WalletCards, X
 } from "lucide-react";
 import { useState } from "react";
-import { Button, Card, CheckItem, Logo, Pill, ProgressBar } from "./ui";
+import { Button, Card, CheckItem, Input, Logo, Pill, ProgressBar } from "./ui";
+import { saveLeadDb } from "@/lib/db";
+import { trackEvent } from "@/lib/marketing";
 
 function OrbitMark({ className = "" }: { className?: string }) {
   return (
@@ -20,6 +22,9 @@ function OrbitMark({ className = "" }: { className?: string }) {
 
 export default function LandingPage() {
   const [open, setOpen] = useState(false);
+  const [leadEmail,setLeadEmail]=useState("");
+  const [leadSaved,setLeadSaved]=useState(false);
+  const captureLead=async(e:React.FormEvent)=>{e.preventDefault();await saveLeadDb(leadEmail,"landing");trackEvent("Lead");setLeadSaved(true);setLeadEmail("")};
 
   return (
     <main className="overflow-hidden bg-paper">
@@ -172,14 +177,14 @@ export default function LandingPage() {
               <p className="mt-8 font-display text-5xl">R$ 0</p>
               <p className="mt-4 text-sm text-ink/50">Conheça sua realidade financeira sem compromisso.</p>
               <ul className="my-9 grid gap-3"><CheckItem>Controle financeiro básico</CheckItem><CheckItem>Dashboard</CheckItem><CheckItem>1 diagnóstico personalizado</CheckItem></ul>
-              <Link href="/register"><Button variant="secondary" className="w-full !rounded-full">Começar grátis</Button></Link>
+              <Link href="/plans"><Button variant="secondary" className="w-full !rounded-full">Começar grátis</Button></Link>
             </Card>
             <Card className="p-8">
               <div className="flex items-center justify-between"><Pill tone="neutral">Premium mensal</Pill><span className="text-xs font-bold text-ink/35">Flexível</span></div>
               <p className="mt-8 font-display text-5xl">R$ 27<span className="font-sans text-sm text-ink/35"> /mês</span></p>
               <p className="mt-4 text-sm text-ink/50">Acompanhamento contínuo para evoluir mês a mês.</p>
               <ul className="my-9 grid gap-3"><CheckItem>Relatórios ilimitados</CheckItem><CheckItem>Projeções de metas e dívidas</CheckItem><CheckItem>Plano de Recomeço atualizado</CheckItem></ul>
-              <Link href="/register"><Button variant="secondary" className="w-full !rounded-full">Assinar mensal</Button></Link>
+              <Link href="/plans"><Button variant="secondary" className="w-full !rounded-full">Assinar mensal</Button></Link>
             </Card>
             <Card className="relative overflow-hidden bg-forest p-8 text-white">
               <OrbitMark className="absolute -bottom-20 -right-20 w-72 text-white/5"/>
@@ -188,7 +193,7 @@ export default function LandingPage() {
               <p className="relative mt-3 text-sm font-bold text-light">Menos de R$ 12,25 por mês</p>
               <p className="relative mt-2 text-sm text-white/50">Economize R$ 177 por ano.</p>
               <ul className="relative my-9 grid gap-3 [&_li]:text-white/70"><CheckItem>Tudo do Premium mensal</CheckItem><CheckItem>Melhor custo-benefício</CheckItem><CheckItem>12 meses de evolução</CheckItem></ul>
-              <Link href="/register"><Button className="relative w-full !rounded-full !bg-white !text-forest">Escolher anual <ArrowRight size={16}/></Button></Link>
+              <Link href="/plans"><Button className="relative w-full !rounded-full !bg-white !text-forest">Escolher anual <ArrowRight size={16}/></Button></Link>
             </Card>
           </div>
         </div>
@@ -217,6 +222,10 @@ export default function LandingPage() {
           <div><p className="eyebrow">O próximo passo pode ser pequeno</p><h2 className="mt-3 font-display text-4xl sm:text-5xl">Mas precisa apontar para algum lugar.</h2></div>
           <Link href="/onboarding"><Button className="shrink-0 !rounded-full px-8 py-4">Começar meu recomeço <ArrowRight size={17}/></Button></Link>
         </div>
+      </section>
+
+      <section className="bg-cream py-16">
+        <div className="container-page mx-auto max-w-3xl text-center"><p className="eyebrow">Conteúdo para o seu momento</p><h2 className="mt-4 font-display text-4xl">Receba ideias práticas para cuidar do dinheiro com mais calma.</h2><form onSubmit={captureLead} className="mx-auto mt-7 flex max-w-xl flex-col gap-3 sm:flex-row"><div className="flex-1 text-left"><Input required type="email" label="Seu melhor e-mail" value={leadEmail} onChange={e=>setLeadEmail(e.target.value)} placeholder="voce@email.com"/></div><Button type="submit" className="sm:self-end">Quero receber</Button></form>{leadSaved&&<p role="status" className="mt-4 text-sm font-bold text-forest">Tudo certo. Seu e-mail foi registrado.</p>}</div>
       </section>
 
       <footer className="bg-ink py-12 text-white">

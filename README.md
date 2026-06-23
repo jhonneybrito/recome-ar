@@ -170,6 +170,9 @@ A Vercel detecta automaticamente a URL pública pelo valor de `VERCEL_URL`. `NEX
 | `STRIPE_WEBHOOK_SECRET` | Validação de webhooks Stripe | Não |
 | `OPENAI_API_KEY` | Geração do plano financeiro por IA | Não |
 | `NEXT_PUBLIC_APP_URL` | Domínio canônico da aplicação | Não |
+| `NEXT_PUBLIC_META_PIXEL_ID` | ID opcional do Meta Pixel | Não |
+| `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` | Price ID do Premium Mensal (R$ 27) | Para checkout |
+| `NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID` | Price ID do Premium Anual (R$ 147) | Para checkout |
 
 Nunca exponha `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` ou `OPENAI_API_KEY` em código executado no navegador.
 
@@ -210,10 +213,23 @@ Nunca use `SUPABASE_SERVICE_ROLE_KEY` no navegador. O projeto cliente utiliza so
 
 ## Stripe
 
-1. Crie os produtos Individual e Plano a Dois.
-2. Configure as chaves do Stripe.
-3. Envie o Price ID para `POST /api/stripe/checkout`.
-4. Configure um webhook antes de ativar assinaturas reais.
+1. Crie os produtos Premium Mensal por R$ 27 e Premium Anual por R$ 147.
+2. Salve os Price IDs nas variáveis correspondentes.
+3. Configure `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET`.
+4. Crie um webhook apontando para `/api/stripe/webhook` e assine o evento `checkout.session.completed`.
+5. O webhook atualiza `profiles.plan` e registra a assinatura.
+
+## Planos e limites
+
+- Gratuito: 20 lançamentos por competência mensal, 3 metas, 3 dívidas e 1 Plano a Dois.
+- Premium Mensal: R$ 27/mês.
+- Premium Anual: R$ 147/ano, destacado como **Mais escolhido**.
+
+Os limites são verificados na interface e também por triggers no Supabase. O usuário não possui permissão para alterar diretamente o campo `profiles.plan`.
+
+## Meta Pixel e leads
+
+Defina `NEXT_PUBLIC_META_PIXEL_ID` para ativar os eventos `PageView`, `Lead`, `CompleteRegistration`, `InitiateCheckout` e `Purchase`. A landing e o cadastro gravam e-mails na tabela `leads`; a política permite inserção, mas não leitura pública.
 
 ## Inteligência artificial
 
@@ -225,6 +241,8 @@ O endpoint `POST /api/ai-plan` mantém a chave no servidor. Sem `OPENAI_API_KEY`
 - `/login`
 - `/register`
 - `/forgot-password`
+- `/reset-password`
+- `/plans`
 - `/onboarding`
 - `/dashboard`
 - `/transactions`

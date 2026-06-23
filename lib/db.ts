@@ -97,3 +97,14 @@ export async function saveCoupleMeetingDb(topics: string[]) {
   const { error } = await context.supabase.from("couple_meetings").upsert({ user_id: context.user.id, month_key: new Date().toISOString().slice(0, 7), topic_1: topics[0], topic_2: topics[1], topic_3: topics[2] }, { onConflict: "user_id,month_key" });
   if (error) throw error; return true;
 }
+
+export async function saveLeadDb(email: string, source: string) {
+  const supabase = createClient();
+  if (!supabase) {
+    localStorage.setItem(`recomecar:lead:${email.toLowerCase()}`, JSON.stringify({ email, source, createdAt: new Date().toISOString() }));
+    return true;
+  }
+  const { error } = await supabase.from("leads").insert({ email: email.toLowerCase(), source });
+  if (error && error.code !== "23505") throw error;
+  return true;
+}

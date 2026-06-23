@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import CookieBanner from "@/components/cookie-banner";
+import MetaPixel from "@/components/meta-pixel";
 
 export const metadata: Metadata = {
   title: "Recomeçar — sua vida financeira, no seu ritmo",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className="font-sans antialiased">{children}<CookieBanner/></body>
+      <body className="font-sans antialiased">{children}<CookieBanner/><MetaPixel/></body>
     </html>
   );
 }
