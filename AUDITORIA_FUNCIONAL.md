@@ -63,3 +63,28 @@ Enquanto o Supabase não estiver ativo, os dados são armazenados em chaves sepa
 ## Limite atual do MVP
 
 Os dados ainda ficam no navegador do dispositivo. Para produção com sincronização, recuperação de conta e múltiplos dispositivos, é necessário conectar autenticação e banco de dados do Supabase. O hash local protege a senha de armazenamento em texto puro, mas não substitui autenticação de produção.
+
+## Revisão de conexão entre interface e dados — 23 de junho de 2026
+
+### Problema encontrado
+
+O dashboard e o relatório conseguiam usar os valores agregados do onboarding, mas as páginas de movimentações e dívidas permaneciam vazias. Além disso, uma lista vazia era tratada como “nunca cadastrada”, fazendo valores antigos do onboarding reaparecerem depois da exclusão do último registro.
+
+### Correções
+
+- Valores financeiros já informados no onboarding são migrados uma única vez para movimentações, dívidas e metas editáveis.
+- A migração preserva qualquer conjunto que já tenha sido cadastrado e não sobrescreve dados existentes.
+- As stores agora distinguem “ainda não inicializado” de “inicializado e vazio”.
+- Dashboard e relatório usam o onboarding somente antes da primeira inicialização da respectiva store.
+- Depois da inicialização, inclusive com lista vazia, apenas os dados reais cadastrados são considerados.
+- Movimentações, dívidas e metas sincronizam alterações entre componentes e abas por eventos do navegador.
+- A distribuição de despesas por categoria é recalculada diretamente das movimentações persistidas.
+
+### Validação
+
+- Valores do onboarding migrados para 4 movimentações e 1 dívida reais na prévia existente.
+- Dashboard, movimentações, dívidas, metas e relatório exibiram totais consistentes.
+- Formulários de criação das três áreas abriram corretamente.
+- Edição e salvamento de movimentação, dívida e meta foram executados no navegador sem duplicação.
+- Exclusões foram verificadas na implementação, incluindo atualização do `localStorage` e evento de sincronização; nenhum dado real foi apagado durante a auditoria.
+- TypeScript e build de produção aprovados.

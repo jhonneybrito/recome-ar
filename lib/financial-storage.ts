@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { defaultFinancialProfile, type FinancialProfile } from "./financial-calculations";
+import { hasStoredTransactions, saveTransactions, type FinancialTransaction } from "./transactions-storage";
+import { hasStoredDebts, saveDebts } from "./debts-storage";
+import { hasStoredGoals, saveGoals } from "./goals-storage";
 
 const STORAGE_KEY = "recomecar:financial-profile:v1";
 
@@ -22,12 +25,51 @@ export function saveFinancialProfile(profile: FinancialProfile) {
   }
 }
 
+export function migrateProfileToRecords(profile: FinancialProfile) {
+  if (typeof window === "undefined") return;
+  const hasFinancialData = [
+    profile.monthlyIncome,
+    profile.otherIncome,
+    profile.fixedExpenses,
+    profile.variableExpenses,
+    profile.debtTotal,
+    profile.goalAmount,
+    profile.currentSavings,
+  ].some((value) => value > 0);
+  if (!hasFinancialData) return;
+
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const createdAt = now.toISOString();
+
+  if (!hasStoredTransactions()) {
+    const transactions: FinancialTransaction[] = [];
+    if (profile.monthlyIncome > 0) transactions.push({ id: crypto.randomUUID(), description: "Renda mensal informada no onboarding", amount: profile.monthlyIncome, type: "income", category: "Salário", date, createdAt });
+    if (profile.otherIncome > 0) transactions.push({ id: crypto.randomUUID(), description: "Outras rendas informadas no onboarding", amount: profile.otherIncome, type: "income", category: "Outras receitas", date, createdAt });
+    if (profile.fixedExpenses > 0) transactions.push({ id: crypto.randomUUID(), description: "Gastos fixos informados no onboarding", amount: profile.fixedExpenses, type: "expense", category: "Contas da casa", date, createdAt });
+    if (profile.variableExpenses > 0) transactions.push({ id: crypto.randomUUID(), description: "Gastos variáveis informados no onboarding", amount: profile.variableExpenses, type: "expense", category: "Outras despesas", date, createdAt });
+    saveTransactions(transactions);
+  }
+
+  if (!hasStoredDebts()) {
+    saveDebts(profile.debtTotal > 0 ? [{ id: crypto.randomUUID(), name: profile.debtType || "Dívida inicial", type: profile.debtType || "Outro", total: profile.debtTotal, paid: 0, monthlyPayment: profile.debtMonthlyPayments, interestRate: 0 }] : []);
+  }
+
+  if (!hasStoredGoals()) {
+    saveGoals(profile.goalAmount > 0 ? [{ id: crypto.randomUUID(), name: profile.mainGoal, category: "Objetivo principal", target: profile.goalAmount, current: profile.currentSavings, monthlyContribution: 0, targetDate: "" }] : []);
+  }
+}
+
 export function useFinancialProfile() {
   const [profile, setProfile] = useState<FinancialProfile>(defaultFinancialProfile);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const sync = () => setProfile(loadFinancialProfile());
+    const sync = () => {
+      const storedProfile = loadFinancialProfile();
+      setProfile(storedProfile);
+      migrateProfileToRecords(storedProfile);
+    };
     sync();
     setReady(true);
     window.addEventListener("storage", sync);

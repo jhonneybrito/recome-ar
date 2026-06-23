@@ -23,26 +23,26 @@ const monthYear = (date: Date | null) => date ? new Intl.DateTimeFormat("pt-BR",
 export default function Dashboard() {
   const { profile } = useFinancialProfile();
   const { state: gamification } = useGamification();
-  const { transactions } = useTransactions();
-  const { debts } = useDebts();
-  const { goals } = useGoals();
+  const { transactions, initialized: transactionsInitialized } = useTransactions();
+  const { debts, initialized: debtsInitialized } = useDebts();
+  const { goals, initialized: goalsInitialized } = useGoals();
   const currentMonth = new Date().toISOString().slice(0,7);
   const monthTransactions = transactions.filter((item)=>item.date.startsWith(currentMonth));
   const monthIncomes = monthTransactions.filter((item)=>item.type==="income");
   const monthExpenses = monthTransactions.filter((item)=>item.type==="expense");
-  const income = monthIncomes.length ? monthIncomes.reduce((sum,item)=>sum+item.amount,0) : calculateTotalIncome(profile);
-  const expenses = monthExpenses.length ? monthExpenses.reduce((sum,item)=>sum+item.amount,0) : calculateMonthlyExpenses(profile);
-  const payments = debts.length ? debts.reduce((sum,item)=>sum+item.monthlyPayment,0) : calculateDebtMonthlyPayments(profile);
-  const debt = debts.length ? debts.reduce((sum,item)=>sum+Math.max(0,item.total-item.paid),0) : calculateDebtTotal(profile);
+  const income = transactionsInitialized ? monthIncomes.reduce((sum,item)=>sum+item.amount,0) : calculateTotalIncome(profile);
+  const expenses = transactionsInitialized ? monthExpenses.reduce((sum,item)=>sum+item.amount,0) : calculateMonthlyExpenses(profile);
+  const payments = debtsInitialized ? debts.reduce((sum,item)=>sum+item.monthlyPayment,0) : calculateDebtMonthlyPayments(profile);
+  const debt = debtsInitialized ? debts.reduce((sum,item)=>sum+Math.max(0,item.total-item.paid),0) : calculateDebtTotal(profile);
   const balance = income - expenses - payments;
   const derivedProfile = { ...profile, monthlyIncome: income, otherIncome: 0, fixedExpenses: 0, variableExpenses: expenses, debtTotal: debt, debtMonthlyPayments: payments };
   const commitment = calculateIncomeCommitment(derivedProfile);
   const health = calculateFinancialHealth(derivedProfile);
   const goalContribution = Math.max(0, balance * 0.7);
-  const primaryGoal = goals[0];
-  const goalTarget = primaryGoal?.target ?? profile.goalAmount;
-  const goalCurrent = primaryGoal?.current ?? profile.currentSavings;
-  const goalTitle = primaryGoal?.name ?? profile.mainGoal;
+  const primaryGoal = goalsInitialized ? goals[0] : undefined;
+  const goalTarget = goalsInitialized ? primaryGoal?.target ?? 0 : profile.goalAmount;
+  const goalCurrent = goalsInitialized ? primaryGoal?.current ?? 0 : profile.currentSavings;
+  const goalTitle = goalsInitialized ? primaryGoal?.name ?? "Defina sua próxima meta" : profile.mainGoal;
   const goalMonths = estimateGoalTime(goalTarget, goalCurrent, primaryGoal?.monthlyContribution || goalContribution);
   const payoffMonths = estimateDebtPayoffTime(debt, payments + Math.max(0, balance * 0.3));
   const annual = calculateAnnualProjection(derivedProfile);
@@ -55,11 +55,12 @@ export default function Dashboard() {
   return (
     <AppShell title={`Olá, ${profile.name || "por aqui"}`} subtitle="Os indicadores combinam seu planejamento com os registros financeiros do mês.">
       <div className="grid gap-5">
-        {(!monthIncomes.length || !monthExpenses.length) && <div className="rounded-2xl border border-sage/30 bg-mist px-5 py-4 text-sm leading-6 text-ink/60"><b className="text-forest">Seu retrato ainda está sendo construído.</b> {!monthIncomes.length && "Cadastre ao menos uma receita do mês. "}{!monthExpenses.length && "Cadastre suas despesas à medida que acontecerem. "}Enquanto isso, usamos os valores informados no onboarding para evitar conclusões precipitadas.</div>}
+        {transactionsInitialized && (!monthIncomes.length || !monthExpenses.length) && <div className="rounded-2xl border border-sage/30 bg-mist px-5 py-4 text-sm leading-6 text-ink/60"><b className="text-forest">Seu retrato ainda está sendo construído.</b> {!monthIncomes.length && "Cadastre ao menos uma receita do mês. "}{!monthExpenses.length && "Cadastre suas despesas à medida que acontecerem. "}Os indicadores mostram somente as movimentações realmente cadastradas.</div>}
+        {!transactionsInitialized && <div className="rounded-2xl border border-sage/30 bg-mist px-5 py-4 text-sm leading-6 text-ink/60"><b className="text-forest">Visão inicial do onboarding.</b> Cadastre sua primeira movimentação para o painel passar a usar exclusivamente seu histórico real.</div>}
         <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
           {[
             ["Saldo mensal", money(balance), Wallet, balance >= 0 ? "Espaço disponível no mês" : "Valor a reorganizar com calma", balance >= 0 ? "green" : "peach"],
-            ["Receita mensal", money(income), ArrowUpRight, monthIncomes.length ? `${monthIncomes.length} registros no mês` : "Valor do onboarding", "green"],
+            ["Receita mensal", money(income), ArrowUpRight, transactionsInitialized ? `${monthIncomes.length} registros no mês` : "Valor do onboarding", "green"],
             ["Despesas mensais", money(expenses), ArrowDownRight, `${income ? Math.round(expenses / income * 100) : 0}% da renda`, "peach"],
             ["Patrimônio acumulado", money(profile.accumulatedNetWorth), Landmark, profile.netWorthGoal > 0 ? `${Math.min(100,profile.accumulatedNetWorth/profile.netWorthGoal*100).toFixed(0)}% da meta patrimonial` : "Atualize sua meta", "green"],
           ].map(([label,value,Icon,note,tone]) => { const I=Icon as typeof Wallet; return <Card key={String(label)}><div className="flex items-center justify-between gap-3"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${tone==="peach"?"bg-peach/20 text-[#9a532f]":"bg-mist text-forest"}`}><I size={18}/></span><span className="text-right text-[11px] font-bold text-ink/45">{String(note)}</span></div><p className="mt-5 text-xs font-bold text-ink/40">{String(label)}</p><p className="mt-1 font-display text-2xl">{String(value)}</p></Card>})}

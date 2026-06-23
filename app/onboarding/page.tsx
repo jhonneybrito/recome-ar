@@ -5,10 +5,8 @@ import { ArrowLeft, ArrowRight, Check, Heart, Home, Sparkles, Target, Wallet } f
 import { useEffect, useState } from "react";
 import { Button, Input, Logo } from "@/components/ui";
 import { defaultFinancialProfile, type FinancialProfile, type MainGoal } from "@/lib/financial-calculations";
-import { loadFinancialProfile, saveFinancialProfile } from "@/lib/financial-storage";
+import { loadFinancialProfile, migrateProfileToRecords, saveFinancialProfile } from "@/lib/financial-storage";
 import LegalFooter from "@/components/legal-footer";
-import { loadDebts, saveDebts } from "@/lib/debts-storage";
-import { loadGoals, saveGoals } from "@/lib/goals-storage";
 
 const goals: [typeof Home, MainGoal, string][] = [
   [Home, "Sair das dívidas", "Quero voltar a respirar"],
@@ -33,9 +31,9 @@ export default function Onboarding() {
     setData((current) => ({ ...current, [field]: numberValue(value) }));
 
   const finish = () => {
-    saveFinancialProfile({ ...data, updatedAt: new Date().toISOString() });
-    if (data.debtTotal > 0 && loadDebts().length === 0) saveDebts([{ id: crypto.randomUUID(), name: data.debtType || "Dívida inicial", type: data.debtType || "Outro", total: data.debtTotal, paid: 0, monthlyPayment: data.debtMonthlyPayments, interestRate: 0 }]);
-    if (data.goalAmount > 0 && loadGoals().length === 0) saveGoals([{ id: crypto.randomUUID(), name: data.mainGoal, category: "Objetivo principal", target: data.goalAmount, current: data.currentSavings, monthlyContribution: 0, targetDate: "" }]);
+    const profile = { ...data, updatedAt: new Date().toISOString() };
+    saveFinancialProfile(profile);
+    migrateProfileToRecords(profile);
   };
 
   return (

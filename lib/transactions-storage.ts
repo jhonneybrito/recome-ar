@@ -31,6 +31,10 @@ export function loadTransactions(): FinancialTransaction[] {
   }
 }
 
+export function hasStoredTransactions() {
+  return typeof window !== "undefined" && window.localStorage.getItem(STORAGE_KEY) !== null;
+}
+
 export function saveTransactions(transactions: FinancialTransaction[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
@@ -39,9 +43,15 @@ export function saveTransactions(transactions: FinancialTransaction[]) {
 
 export function useTransactions() {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>(initialTransactions);
+  const [initialized, setInitialized] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const sync = () => setTransactions(loadTransactions());
+    const sync = () => {
+      setTransactions(loadTransactions());
+      setInitialized(hasStoredTransactions());
+      setReady(true);
+    };
     sync();
     window.addEventListener("storage", sync);
     window.addEventListener("recomecar:transactions-updated", sync);
@@ -70,5 +80,5 @@ export function useTransactions() {
     saveTransactions(next);
   }, []);
 
-  return { transactions, addTransaction, updateTransaction, removeTransaction };
+  return { transactions, addTransaction, updateTransaction, removeTransaction, initialized, ready };
 }

@@ -22,22 +22,26 @@ const money = (value: number) =>
 
 export default function FinancialReport() {
   const { profile } = useFinancialProfile();
-  const { transactions } = useTransactions();
-  const { debts } = useDebts();
-  const { goals } = useGoals();
+  const { transactions, initialized: transactionsInitialized } = useTransactions();
+  const { debts, initialized: debtsInitialized } = useDebts();
+  const { goals, initialized: goalsInitialized } = useGoals();
   const month = new Date().toISOString().slice(0, 7);
   const items = transactions.filter((transaction) => transaction.date.startsWith(month));
   const incomeItems = items.filter((transaction) => transaction.type === "income");
   const expenseItems = items.filter((transaction) => transaction.type === "expense");
-  const income = incomeItems.length
+  const income = transactionsInitialized
     ? incomeItems.reduce((sum, transaction) => sum + transaction.amount, 0)
     : profile.monthlyIncome + profile.otherIncome;
-  const expenses = expenseItems.length
+  const expenses = transactionsInitialized
     ? expenseItems.reduce((sum, transaction) => sum + transaction.amount, 0)
     : profile.fixedExpenses + profile.variableExpenses;
-  const hasIncompleteMonth = incomeItems.length === 0 || expenseItems.length === 0;
-  const debtTotal = debts.reduce((sum, debt) => sum + Math.max(0, debt.total - debt.paid), 0);
-  const payments = debts.reduce((sum, debt) => sum + debt.monthlyPayment, 0);
+  const hasIncompleteMonth = transactionsInitialized && (incomeItems.length === 0 || expenseItems.length === 0);
+  const debtTotal = debtsInitialized
+    ? debts.reduce((sum, debt) => sum + Math.max(0, debt.total - debt.paid), 0)
+    : profile.debtTotal;
+  const payments = debtsInitialized
+    ? debts.reduce((sum, debt) => sum + debt.monthlyPayment, 0)
+    : profile.debtMonthlyPayments;
   const data = {
     ...profile,
     monthlyIncome: income,
@@ -51,7 +55,11 @@ export default function FinancialReport() {
   const health = calculateFinancialHealth(data);
   const commitment = calculateIncomeCommitment(data);
   const annual = calculateAnnualProjection(data);
-  const goal = goals[0];
+  const goal = goalsInitialized
+    ? goals[0]
+    : profile.goalAmount > 0
+      ? { name: profile.mainGoal, target: profile.goalAmount, current: profile.currentSavings, monthlyContribution: 0 }
+      : undefined;
   const goalMonths = goal
     ? estimateGoalTime(goal.target, goal.current, goal.monthlyContribution)
     : null;
@@ -77,8 +85,14 @@ export default function FinancialReport() {
       <div className="mx-auto grid max-w-6xl gap-5">
         {hasIncompleteMonth && (
           <div className="rounded-2xl border border-sage/35 bg-mist/70 p-4 text-sm text-forest">
-            Ainda faltam alguns registros deste mês. Para não deixar sua visão vazia, usamos os
-            valores do seu planejamento inicial onde necessário.
+            Ainda faltam alguns registros deste mês. O relatório considera somente as
+            movimentações cadastradas, sem completar os valores com dados antigos.
+          </div>
+        )}
+        {!transactionsInitialized && (
+          <div className="rounded-2xl border border-sage/35 bg-mist/70 p-4 text-sm text-forest">
+            Esta é a visão inicial do onboarding. Após a primeira movimentação, o relatório passa
+            a usar exclusivamente o histórico cadastrado.
           </div>
         )}
 
