@@ -216,8 +216,16 @@ Nunca use `SUPABASE_SERVICE_ROLE_KEY` no navegador. O projeto cliente utiliza so
 1. Crie os produtos Premium Mensal por R$ 27 e Premium Anual por R$ 147.
 2. Salve os Price IDs nas variáveis correspondentes.
 3. Configure `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET`.
-4. Crie um webhook apontando para `/api/stripe/webhook` e assine o evento `checkout.session.completed`.
+4. Crie um webhook apontando exatamente para:
+
+   ```text
+   https://recomecar-chi.vercel.app/api/stripe/webhook
+   ```
+
+   Assine o evento `checkout.session.completed`. Acessar essa URL pelo navegador usa GET e retorna `405 Method Not Allowed`; isso confirma que a rota existe, pois o Stripe envia eventos por POST.
 5. O webhook atualiza `profiles.plan` e registra a assinatura.
+
+O checkout é criado por `POST /api/stripe/checkout`. O navegador envia apenas `premium_monthly` ou `premium_annual`; os Price IDs são escolhidos no servidor pelas variáveis da Vercel.
 
 ## Planos e limites
 

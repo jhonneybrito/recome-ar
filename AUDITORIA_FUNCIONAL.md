@@ -162,3 +162,12 @@ Este workspace não contém as credenciais configuradas na Vercel. Após executa
 - Campo `profiles.plan` protegido contra alteração pelo próprio usuário.
 - Criada tabela `leads` com captura na landing e no cadastro.
 - Estrutura do Meta Pixel preparada para PageView, Lead, CompleteRegistration, InitiateCheckout e Purchase.
+
+## Correção das rotas Stripe
+
+- `GET /api/stripe/webhook` e `GET /api/stripe/checkout` retornam 405 com `Allow: POST`.
+- Webhook usa runtime Node.js, corpo bruto e validação por `STRIPE_WEBHOOK_SECRET`.
+- `checkout.session.completed` localiza o usuário por metadata, `client_reference_id`, perfil por e-mail ou Auth por e-mail.
+- `profiles.plan` e `subscriptions` são atualizados com tratamento explícito de erros.
+- Checkout aceita somente o identificador lógico do plano e escolhe o Price ID no servidor.
+- Build confirma as rotas dinâmicas `/api/stripe/webhook` e `/api/stripe/checkout`.
