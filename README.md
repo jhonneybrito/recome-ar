@@ -156,7 +156,12 @@ Se enviar apenas o conteúdo da pasta `recomecar` para o repositório, deixe **R
 
 Se um deployment anterior falhou durante `next build`, confirme que o commit mais recente contém o `package-lock.json` atualizado e limpe o cache da Vercel. A instalação recomendada em CI é `npm ci`; a configuração atual também aceita `npm install`.
 
-A Vercel detecta automaticamente a URL pública pelo valor de `VERCEL_URL`. `NEXT_PUBLIC_APP_URL` é opcional, mas pode ser definido com o domínio canônico de produção, por exemplo `https://recomecar.com`.
+O Stripe Checkout usa URLs absolutas fixas do domínio publicado para evitar redirecionamento para domínios internos da Vercel:
+
+- sucesso: `https://recomecar-chi.vercel.app/dashboard?payment=success`
+- cancelamento: `https://recomecar-chi.vercel.app/plans?payment=cancelled`
+
+Não use `vercel.com/login` nem URLs relativas como retorno do Stripe Checkout.
 
 ## Variáveis de ambiente
 
@@ -169,7 +174,6 @@ A Vercel detecta automaticamente a URL pública pelo valor de `VERCEL_URL`. `NEX
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe no navegador | Não |
 | `STRIPE_WEBHOOK_SECRET` | Validação de webhooks Stripe | Não |
 | `OPENAI_API_KEY` | Geração do plano financeiro por IA | Não |
-| `NEXT_PUBLIC_APP_URL` | Domínio canônico da aplicação | Não |
 | `NEXT_PUBLIC_META_PIXEL_ID` | ID opcional do Meta Pixel | Não |
 | `NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID` | Price ID do Premium Mensal (R$ 27) | Para checkout |
 | `NEXT_PUBLIC_STRIPE_ANNUAL_PRICE_ID` | Price ID do Premium Anual (R$ 147) | Para checkout |
@@ -225,7 +229,7 @@ Nunca use `SUPABASE_SERVICE_ROLE_KEY` no navegador. O projeto cliente utiliza so
    Assine o evento `checkout.session.completed`. Acessar essa URL pelo navegador usa GET e retorna `405 Method Not Allowed`; isso confirma que a rota existe, pois o Stripe envia eventos por POST.
 5. O webhook atualiza `profiles.plan` e registra a assinatura.
 
-O checkout é criado por `POST /api/stripe/checkout`. O navegador envia apenas `premium_monthly` ou `premium_annual`; os Price IDs são escolhidos no servidor pelas variáveis da Vercel.
+O checkout é criado por `POST /api/stripe/checkout`. O navegador envia apenas `premium_monthly` ou `premium_annual`; os Price IDs são escolhidos no servidor pelas variáveis da Vercel. Ao concluir o pagamento, o Stripe retorna para `/dashboard?payment=success`; ao cancelar, retorna para `/plans?payment=cancelled`.
 
 ## Planos e limites
 

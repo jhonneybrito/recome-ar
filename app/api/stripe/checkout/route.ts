@@ -6,6 +6,8 @@ export const runtime = "nodejs";
 
 type PaidPlan = "premium_monthly" | "premium_annual";
 
+const PRODUCTION_APP_URL = "https://recomecar-chi.vercel.app";
+
 export function GET() {
   return NextResponse.json(
     { message: "Endpoint de checkout Stripe ativo. Inicie uma sessão usando POST." },
@@ -54,13 +56,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Entre na sua conta antes de assinar." }, { status: 401 });
   }
 
-  const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
-  const baseUrl = (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    vercelUrl ||
-    new URL(request.url).origin
-  ).replace(/\/$/, "");
-
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -69,8 +64,8 @@ export async function POST(request: Request) {
       client_reference_id: user.id,
       metadata: { user_id: user.id, plan },
       subscription_data: { metadata: { user_id: user.id, plan } },
-      success_url: `${baseUrl}/plans?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/plans?checkout=cancelled`,
+      success_url: `${PRODUCTION_APP_URL}/dashboard?payment=success`,
+      cancel_url: `${PRODUCTION_APP_URL}/plans?payment=cancelled`,
     });
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (error) {
