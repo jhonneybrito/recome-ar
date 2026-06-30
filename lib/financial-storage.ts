@@ -6,11 +6,13 @@ import { hasStoredTransactions, saveTransactions, type FinancialTransaction } fr
 import { hasStoredDebts, saveDebts } from "./debts-storage";
 import { hasStoredGoals, saveGoals } from "./goals-storage";
 import { getProfileDb, saveProfileDb } from "./db";
+import { isSupabaseConfigured } from "./supabase/config";
 
 const STORAGE_KEY = "recomecar:financial-profile:v1";
 
 export function loadFinancialProfile(): FinancialProfile {
   if (typeof window === "undefined") return defaultFinancialProfile;
+  if (isSupabaseConfigured) return defaultFinancialProfile;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     return stored ? { ...defaultFinancialProfile, ...JSON.parse(stored) } : defaultFinancialProfile;
@@ -20,14 +22,14 @@ export function loadFinancialProfile(): FinancialProfile {
 }
 
 export function saveFinancialProfile(profile: FinancialProfile) {
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && !isSupabaseConfigured) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     window.dispatchEvent(new Event("recomecar:profile-updated"));
   }
 }
 
 export function migrateProfileToRecords(profile: FinancialProfile) {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isSupabaseConfigured) return;
   const hasFinancialData = [
     profile.monthlyIncome,
     profile.otherIncome,
@@ -66,20 +68,21 @@ export function useFinancialProfile() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (isSupabaseConfigured) {
+      getProfileDb().then((remote) => {
+        setProfile({ ...defaultFinancialProfile, ...remote });
+        setReady(true);
+      }).catch((error) => { console.error(error); setReady(true); });
+      return;
+    }
+
     const sync = () => {
       const storedProfile = loadFinancialProfile();
       setProfile(storedProfile);
       migrateProfileToRecords(storedProfile);
+      setReady(true);
     };
     sync();
-    getProfileDb().then((remote) => {
-      if (remote) {
-        const next = { ...loadFinancialProfile(), ...remote };
-        setProfile(next);
-        saveFinancialProfile(next);
-      }
-    }).catch(console.error);
-    setReady(true);
     window.addEventListener("storage", sync);
     window.addEventListener("recomecar:profile-updated", sync);
     return () => {
@@ -90,8 +93,8 @@ export function useFinancialProfile() {
 
   const updateProfile = useCallback((next: FinancialProfile) => {
     setProfile(next);
-    saveFinancialProfile(next);
-    saveProfileDb(next).catch(console.error);
+    if (isSupabaseConfigured) saveProfileDb(next).catch(console.error);
+    else saveFinancialProfile(next);
   }, []);
 
   return { profile, updateProfile, ready };

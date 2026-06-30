@@ -7,6 +7,7 @@ import { Button, Input, Logo } from "@/components/ui";
 import { defaultFinancialProfile, type FinancialProfile, type MainGoal } from "@/lib/financial-calculations";
 import { loadFinancialProfile, migrateProfileToRecords, saveFinancialProfile } from "@/lib/financial-storage";
 import { saveDebtDb, saveGoalDb, saveProfileDb, saveTransactionDb } from "@/lib/db";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import LegalFooter from "@/components/legal-footer";
 
 const goals: [typeof Home, MainGoal, string][] = [
@@ -34,9 +35,12 @@ export default function Onboarding() {
 
   const finish = async () => {
     const profile = { ...data, updatedAt: new Date().toISOString() };
-    saveFinancialProfile(profile);
-    migrateProfileToRecords(profile);
-    await saveProfileDb(profile);
+    if (isSupabaseConfigured) {
+      await saveProfileDb(profile);
+    } else {
+      saveFinancialProfile(profile);
+      migrateProfileToRecords(profile);
+    }
     const date = new Date().toISOString().slice(0, 10);
     await Promise.all([
       data.monthlyIncome > 0 ? saveTransactionDb({ description: "Renda mensal informada no onboarding", amount: data.monthlyIncome, type: "income", category: "Salário", date }) : null,

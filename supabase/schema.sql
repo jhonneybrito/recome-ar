@@ -279,3 +279,48 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
 for each row execute procedure public.handle_new_user();
+
+
+-- Auditoria SaaS: reforço de Auth, RLS e isolamento por usuário.
+alter table public.profiles alter column user_id set not null;
+alter table public.transactions alter column user_id set not null;
+alter table public.debts alter column user_id set not null;
+alter table public.goals alter column user_id set not null;
+alter table public.financial_months alter column user_id set not null;
+alter table public.recurring_items alter column user_id set not null;
+alter table public.couple_meetings alter column user_id set not null;
+alter table public.subscriptions alter column user_id set not null;
+
+create unique index if not exists profiles_user_id_unique on public.profiles(user_id);
+create index if not exists debts_user_id_idx on public.debts(user_id);
+create index if not exists goals_user_id_idx on public.goals(user_id);
+create index if not exists subscriptions_user_id_idx on public.subscriptions(user_id);
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (user_id, name, email, plan, onboarding_completed)
+  values (new.id, coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1), 'Você'), new.email, 'free', false)
+  on conflict (user_id) do update set
+    email = excluded.email,
+    name = coalesce(nullif(public.profiles.name, ''), excluded.name),
+    updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created after insert on auth.users
+for each row execute procedure public.handle_new_user();
+
+do $$ declare table_name text; begin
+  foreach table_name in array array['profiles','transactions','debts','goals','financial_months','recurring_items','couple_meetings']
+  loop
+    execute format('alter table public.%I enable row level security', table_name);
+    execute format('drop policy if exists %I on public.%I', table_name || '_own', table_name);
+    execute format('create policy %I on public.%I for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid())', table_name || '_own', table_name);
+  end loop;
+end $$;
+
+drop policy if exists subscriptions_own on public.subscriptions;
+create policy subscriptions_own on public.subscriptions for select to authenticated using (user_id = auth.uid());

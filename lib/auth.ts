@@ -1,5 +1,6 @@
 "use client";
 
+import { ensureProfileDb } from "./db";
 import { createClient } from "./supabase/client";
 import { isSupabaseConfigured } from "./supabase/config";
 
@@ -12,6 +13,7 @@ export async function signUp(name: string, email: string, password: string) {
     options: { data: { name }, emailRedirectTo: `${window.location.origin}/login` },
   });
   if (error) throw error;
+  if (data.session) await ensureProfileDb(name);
   return data;
 }
 
@@ -20,6 +22,7 @@ export async function signIn(email: string, password: string) {
   if (!supabase) throw new Error("Supabase não está configurado.");
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  await ensureProfileDb(data.user?.user_metadata?.name);
   return data;
 }
 

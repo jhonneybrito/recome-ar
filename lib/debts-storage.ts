@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { deleteDebtDb, getDebtsDb, saveDebtDb } from "./db";
+import { isSupabaseConfigured } from "./supabase/config";
 
 export interface DebtRecord {
   id: string;
@@ -19,7 +20,7 @@ export interface DebtRecord {
 const KEY = "recomecar:debts:v1";
 
 export function loadDebts(): DebtRecord[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined" || isSupabaseConfigured) return [];
   try {
     const items = JSON.parse(window.localStorage.getItem(KEY) || "[]");
     return items.map((item: Partial<DebtRecord>) => ({
@@ -50,10 +51,11 @@ export function getPriorityDebt(items: DebtRecord[]) {
 }
 
 export function hasStoredDebts() {
-  return typeof window !== "undefined" && window.localStorage.getItem(KEY) !== null;
+  return typeof window !== "undefined" && !isSupabaseConfigured && window.localStorage.getItem(KEY) !== null;
 }
 
 export const saveDebts = (items: DebtRecord[]) => {
+  if (typeof window === "undefined" || isSupabaseConfigured) return;
   window.localStorage.setItem(KEY, JSON.stringify(items));
   window.dispatchEvent(new Event("recomecar:debts-updated"));
 };
@@ -63,27 +65,29 @@ export function useDebts() {
   const [initialized, setInitialized] = useState(false);
   const [ready, setReady] = useState(false);
   useEffect(() => {
-    const sync = () => {
-      setDebts(loadDebts());
-      setInitialized(hasStoredDebts());
-      setReady(true);
-    };
+    if (isSupabaseConfigured) {
+      setDebts([]);
+      setInitialized(false);
+      getDebtsDb().then((remote) => { setDebts(remote || []); setInitialized(true); setReady(true); }).catch((error) => { console.error(error); setReady(true); });
+      return;
+    }
+    const sync = () => { setDebts(loadDebts()); setInitialized(hasStoredDebts()); setReady(true); };
     sync();
-    getDebtsDb().then((remote)=>{if(remote){setDebts(remote);setInitialized(true);setReady(true);saveDebts(remote)}}).catch(console.error);
     window.addEventListener("storage", sync);
     window.addEventListener("recomecar:debts-updated", sync);
-    return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("recomecar:debts-updated", sync);
-    };
+    return () => { window.removeEventListener("storage", sync); window.removeEventListener("recomecar:debts-updated", sync); };
   }, []);
+  const refreshRemote = useCallback(async () => { const remote = await getDebtsDb(); if (remote) { setDebts(remote); setInitialized(true); } return remote; }, []);
   const upsertDebt = useCallback(async (debt: Omit<DebtRecord,"id">, id?: string) => {
-    if(await saveDebtDb(debt,id)){const remote=await getDebtsDb();if(remote){setDebts(remote);saveDebts(remote)}return}
+    if (isSupabaseConfigured) { await saveDebtDb(debt, id); await refreshRemote(); return; }
     const current = loadDebts();
     const normalized = debt.isCurrentPriority ? current.map((item)=>({...item,isCurrentPriority:false})) : current;
     const next = id ? normalized.map((item)=>item.id===id?{...debt,id}:item) : [{...debt,id:crypto.randomUUID()},...normalized];
     setDebts(next); saveDebts(next);
-  },[]);
-  const removeDebt = useCallback(async(id:string)=>{if(await deleteDebtDb(id)){const remote=await getDebtsDb();if(remote){setDebts(remote);saveDebts(remote)}return}const next=loadDebts().filter((item)=>item.id!==id);setDebts(next);saveDebts(next)},[]);
+  }, [refreshRemote]);
+  const removeDebt = useCallback(async(id:string)=>{
+    if (isSupabaseConfigured) { await deleteDebtDb(id); await refreshRemote(); return; }
+    const next=loadDebts().filter((item)=>item.id!==id); setDebts(next); saveDebts(next);
+  }, [refreshRemote]);
   return { debts, upsertDebt, removeDebt, initialized, ready };
 }
