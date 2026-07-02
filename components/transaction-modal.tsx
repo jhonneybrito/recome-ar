@@ -42,6 +42,7 @@ export default function TransactionModal({ open, onClose, transaction = null }: 
     const numericAmount = Number(amount.replace(",", "."));
     if (!description.trim() || numericAmount <= 0) return;
     const payload = { description: description.trim(), amount: numericAmount, type, category, date };
+    console.log("[transaction-modal] payload salvo:", payload);
     const monthCount = transactions.filter((item) => item.date.startsWith(date.slice(0, 7))).length;
     if (!transaction && !isPremium && monthCount >= FREE_LIMITS.transactionsPerMonth) {
       setUpgradeOpen(true);

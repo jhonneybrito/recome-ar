@@ -46,7 +46,35 @@ export default function Dashboard() {
 
   useEffect(() => {
     logFinancialTotalsDebug("dashboard", totals);
-  }, [transactions, debts, transactionsInitialized, debtsInitialized, currentMonth]);
+    console.log("[dashboard] transactions carregadas:", transactions);
+    transactions.forEach((transaction) => {
+      const raw = transaction as FinancialTransaction & { created_at?: string; user_id?: string };
+      console.log("[dashboard] transaction normalizada:", {
+        id: raw.id,
+        amount: raw.amount,
+        type: raw.type,
+        category: raw.category,
+        date: raw.date,
+        created_at: raw.created_at || raw.createdAt,
+        user_id: raw.user_id,
+      });
+    });
+    console.log("[dashboard] totais:", {
+      receitas: income,
+      despesas: expenses,
+      saldo: balance,
+      quantidadeMovimentacoes: monthTransactions.length,
+      mesAtual: currentMonth,
+      filtrosAplicados: {
+        campoData: "date",
+        mes: currentMonth,
+        tiposReceita: ["income", "receita", "entrada", "revenue"],
+        tiposDespesa: ["expense", "despesa", "saida", "saída"],
+        transactionsInitialized,
+        debtsInitialized,
+      },
+    });
+  }, [transactions, debts, transactionsInitialized, debtsInitialized, currentMonth, totals, income, expenses, balance, monthTransactions.length]);
   const derivedProfile = { ...profile, monthlyIncome: income, otherIncome: 0, fixedExpenses: 0, variableExpenses: expenses, debtTotal: debt, debtMonthlyPayments: payments };
   const commitment = calculateIncomeCommitment(derivedProfile);
   const health = calculateFinancialHealth(derivedProfile);
