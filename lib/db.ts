@@ -17,14 +17,32 @@ async function clientWithUser() {
 export async function ensureProfileDb(name?: string) {
   const context = await clientWithUser();
   if (!context) return null;
+
+  const safeName = name || context.user.user_metadata?.name || context.user.email?.split("@")[0] || "Você";
+  const safeEmail = context.user.email || "";
+  const updatedAt = new Date().toISOString();
   const payload = {
     user_id: context.user.id,
-    name: name || context.user.user_metadata?.name || context.user.email?.split("@")[0] || "Você",
-    email: context.user.email,
-    updated_at: new Date().toISOString(),
+    name: safeName,
+    email: safeEmail,
+    updated_at: updatedAt,
   };
-  const { error } = await context.supabase.from("profiles").upsert(payload, { onConflict: "user_id" });
-  if (error) throw error;
+
+  const { error } = await context.supabase
+    .from("profiles")
+    .upsert(payload, { onConflict: "user_id" });
+
+  if (error) {
+    console.error("[profiles] erro ao criar/atualizar profile; login não será bloqueado", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      userId: context.user.id,
+    });
+    return false;
+  }
+
   await claimPurchaseAccessDb();
   return true;
 }
