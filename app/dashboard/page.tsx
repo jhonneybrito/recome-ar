@@ -1,13 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Bot, CalendarClock, Flag, HeartPulse, Landmark, Trophy, Wallet } from "lucide-react";
 import AppShell from "@/components/app-shell";
 import { Card, Pill, ProgressBar } from "@/components/ui";
 import {
-  calculateAnnualProjection, calculateDebtMonthlyPayments, calculateDebtTotal,
+  calculateAnnualProjection,
   calculateFinancialHealth, calculateFutureSavings, calculateIncomeCommitment,
-  calculateMonthlyBalance, calculateMonthlyExpenses, calculateTotalIncome,
   estimateDebtPayoffTime, estimateGoalTime, formatDuration, getEstimatedDate,
 } from "@/lib/financial-calculations";
 import { useFinancialProfile } from "@/lib/financial-storage";
@@ -16,6 +16,7 @@ import { useGamification } from "@/lib/gamification-storage";
 import { useTransactions } from "@/lib/transactions-storage";
 import { useDebts } from "@/lib/debts-storage";
 import { useGoals } from "@/lib/goals-storage";
+import { calculateFinancialTotals, getCurrentMonthKey, logFinancialTotalsDebug } from "@/lib/financial-totals";
 
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const monthYear = (date: Date | null) => date ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date) : "depende de criar saldo mensal";
@@ -26,15 +27,26 @@ export default function Dashboard() {
   const { transactions, initialized: transactionsInitialized } = useTransactions();
   const { debts, initialized: debtsInitialized } = useDebts();
   const { goals, initialized: goalsInitialized } = useGoals();
-  const currentMonth = new Date().toISOString().slice(0,7);
-  const monthTransactions = transactions.filter((item)=>item.date.startsWith(currentMonth));
-  const monthIncomes = monthTransactions.filter((item)=>item.type==="income");
-  const monthExpenses = monthTransactions.filter((item)=>item.type==="expense");
-  const income = transactionsInitialized ? monthIncomes.reduce((sum,item)=>sum+item.amount,0) : calculateTotalIncome(profile);
-  const expenses = transactionsInitialized ? monthExpenses.reduce((sum,item)=>sum+item.amount,0) : calculateMonthlyExpenses(profile);
-  const payments = debtsInitialized ? debts.reduce((sum,item)=>sum+item.monthlyPayment,0) : calculateDebtMonthlyPayments(profile);
-  const debt = debtsInitialized ? debts.reduce((sum,item)=>sum+Math.max(0,item.total-item.paid),0) : calculateDebtTotal(profile);
-  const balance = income - expenses - payments;
+  const currentMonth = getCurrentMonthKey();
+  const totals = calculateFinancialTotals({
+    transactions,
+    debts: debtsInitialized ? debts : undefined,
+    profile,
+    monthKey: currentMonth,
+    useProfileFallback: !transactionsInitialized,
+  });
+  const monthTransactions = totals.transactions;
+  const monthIncomes = totals.incomes;
+  const monthExpenses = totals.expenses;
+  const income = totals.income;
+  const expenses = totals.expensesTotal;
+  const payments = totals.debtPayments;
+  const debt = totals.debtTotal;
+  const balance = totals.balance;
+
+  useEffect(() => {
+    logFinancialTotalsDebug("dashboard", totals);
+  }, [transactions, debts, transactionsInitialized, debtsInitialized, currentMonth]);
   const derivedProfile = { ...profile, monthlyIncome: income, otherIncome: 0, fixedExpenses: 0, variableExpenses: expenses, debtTotal: debt, debtMonthlyPayments: payments };
   const commitment = calculateIncomeCommitment(derivedProfile);
   const health = calculateFinancialHealth(derivedProfile);

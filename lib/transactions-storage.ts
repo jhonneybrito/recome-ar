@@ -98,11 +98,13 @@ export function useTransactions() {
     const normalized = { ...transaction, type: normalizeTransactionType(transaction.type) };
     if (isSupabaseConfigured) {
       await saveTransactionDb(normalized);
+      console.info("[transactions] movimentação salva", { action: "create", type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
       await refreshRemote();
       notifyTransactionsUpdated();
       return;
     }
     const current = loadTransactions();
+    console.info("[transactions] movimentação salva", { action: "create-local", type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
     const next = [{ ...normalized, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...current];
     setTransactions(next);
     saveTransactions(next);
@@ -111,10 +113,12 @@ export function useTransactions() {
   const removeTransaction = useCallback(async (id: string) => {
     if (isSupabaseConfigured) {
       await deleteTransactionDb(id);
+      console.info("[transactions] movimentação excluída", { id });
       await refreshRemote();
       notifyTransactionsUpdated();
       return;
     }
+    console.info("[transactions] movimentação excluída", { action: "delete-local", id });
     const next = loadTransactions().filter((transaction) => transaction.id !== id);
     setTransactions(next);
     saveTransactions(next);
@@ -124,10 +128,12 @@ export function useTransactions() {
     const normalized = { ...transaction, type: normalizeTransactionType(transaction.type) };
     if (isSupabaseConfigured) {
       await saveTransactionDb(normalized, id);
+      console.info("[transactions] movimentação salva", { action: "update", id, type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
       await refreshRemote();
       notifyTransactionsUpdated();
       return;
     }
+    console.info("[transactions] movimentação salva", { action: "update-local", id, type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
     const next = loadTransactions().map((item) => item.id === id ? { ...item, ...normalized } : item);
     setTransactions(next);
     saveTransactions(next);

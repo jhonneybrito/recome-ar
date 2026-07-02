@@ -6,6 +6,7 @@ import AppShell from "./app-shell";
 import TransactionModal from "./transaction-modal";
 import { Button, Card, Pill, ProgressBar } from "./ui";
 import { useTransactions, type FinancialTransaction } from "@/lib/transactions-storage";
+import { calculateFinancialTotals } from "@/lib/financial-totals";
 
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -13,13 +14,14 @@ export default function TransactionsPage() {
   const { transactions, removeTransaction } = useTransactions();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialTransaction | null>(null);
-  const incomes = transactions.filter((item)=>item.type==="income").reduce((sum,item)=>sum+item.amount,0);
-  const expenses = transactions.filter((item)=>item.type==="expense").reduce((sum,item)=>sum+item.amount,0);
+  const totals = calculateFinancialTotals({ transactions });
+  const incomes = totals.income;
+  const expenses = totals.expensesTotal;
   const categories = useMemo(() => {
     const grouped = new Map<string,number>();
-    transactions.filter((item)=>item.type==="expense").forEach((item)=>grouped.set(item.category,(grouped.get(item.category)||0)+item.amount));
+    totals.expenses.forEach((item)=>grouped.set(item.category,(grouped.get(item.category)||0)+item.amount));
     return [...grouped.entries()].sort((a,b)=>b[1]-a[1]).map(([name,value])=>({name,value,percentage:expenses?value/expenses*100:0}));
-  },[transactions,expenses]);
+  },[totals.expenses,expenses]);
 
   return (
     <AppShell title="Movimentações" subtitle="Cadastre receitas e despesas e entenda para onde seu dinheiro está indo.">
