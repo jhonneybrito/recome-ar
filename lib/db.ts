@@ -25,7 +25,20 @@ export async function ensureProfileDb(name?: string) {
   };
   const { error } = await context.supabase.from("profiles").upsert(payload, { onConflict: "user_id" });
   if (error) throw error;
+  await claimPurchaseAccessDb();
   return true;
+}
+
+
+export async function claimPurchaseAccessDb() {
+  const context = await clientWithUser();
+  if (!context) return false;
+  const { data, error } = await context.supabase.rpc("claim_purchase_access");
+  if (error) {
+    console.warn("Não foi possível verificar acesso por compra:", error.message);
+    return false;
+  }
+  return Boolean(data);
 }
 
 export async function getTransactionsDb() {

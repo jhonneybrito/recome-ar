@@ -324,3 +324,75 @@ end $$;
 
 drop policy if exists subscriptions_own on public.subscriptions;
 create policy subscriptions_own on public.subscriptions for select to authenticated using (user_id = auth.uid());
+
+
+-- Stripe Payment Link purchases and access grants
+create table if not exists public.purchases (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  name text,
+  stripe_customer_id text,
+  stripe_session_id text unique,
+  payment_status text,
+  product_name text default 'Método Recomeçar',
+  access_granted boolean default true,
+  created_at timestamptz default now()
+);
+
+create index if not exists purchases_email_idx on public.purchases (lower(email));
+create index if not exists purchases_access_email_idx on public.purchases (lower(email), access_granted);
+create unique index if not exists purchases_stripe_session_id_idx on public.purchases (stripe_session_id) where stripe_session_id is not null;
+
+alter table public.purchases enable row level security;
+
+drop policy if exists purchases_own_select on public.purchases;
+create policy purchases_own_select on public.purchases
+  for select
+  using (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+
+create or replace function public.claim_purchase_access()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  user_email text;
+  has_access boolean;
+begin
+  user_email := lower(coalesce(auth.jwt() ->> 'email', ''));
+  if user_email = '' or auth.uid() is null then
+    return false;
+  end if;
+
+  select exists(
+    select 1
+    from public.purchases
+    where lower(email) = user_email
+      and access_granted = true
+  ) into has_access;
+
+  if has_access then
+    insert into public.profiles (user_id, email, name, plan, updated_at)
+    values (
+      auth.uid(),
+      user_email,
+      coalesce(auth.jwt() -> 'user_metadata' ->> 'name', split_part(user_email, '@', 1), 'Você'),
+      'premium_monthly',
+      now()
+    )
+    on conflict (user_id) do update
+      set email = coalesce(public.profiles.email, excluded.email),
+          plan = case
+            when public.profiles.plan = 'premium_annual' then public.profiles.plan
+            else 'premium_monthly'
+          end,
+          updated_at = now();
+  end if;
+
+  return has_access;
+end;
+$$;
+
+grant select on public.purchases to authenticated;
+grant execute on function public.claim_purchase_access() to authenticated;

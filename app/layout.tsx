@@ -4,8 +4,8 @@ import CookieBanner from "@/components/cookie-banner";
 import MetaPixel from "@/components/meta-pixel";
 
 export const metadata: Metadata = {
-  title: "Recomeçar — sua vida financeira, no seu ritmo",
-  description: "Organização financeira simples, acolhedora e inteligente para você ou para o casal.",
+  title: "Recomeçar para Casais — organize dinheiro sem brigas",
+  description: "App, guia e planejamento para casais organizarem finanças, reduzirem estresse e conversarem sobre dinheiro com clareza.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
