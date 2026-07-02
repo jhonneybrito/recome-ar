@@ -94,6 +94,8 @@ export default function Dashboard() {
   const goalTarget = goalsInitialized ? primaryGoal?.target ?? 0 : profile.goalAmount;
   const goalCurrent = goalsInitialized ? primaryGoal?.current ?? 0 : profile.currentSavings;
   const goalTitle = goalsInitialized ? primaryGoal?.name ?? "Defina sua próxima meta" : profile.mainGoal;
+  const accumulatedNetWorth = goalsInitialized ? goals.reduce((sum, goal) => sum + Number(goal.current || 0), 0) : profile.accumulatedNetWorth;
+  const netWorthGoal = goalsInitialized ? goals.reduce((sum, goal) => sum + Number(goal.target || 0), 0) : profile.netWorthGoal;
   const goalMonths = estimateGoalTime(goalTarget, goalCurrent, primaryGoal?.monthlyContribution || goalContribution);
   const payoffMonths = estimateDebtPayoffTime(debt, payments + Math.max(0, balance * 0.3));
   const annual = calculateAnnualProjection(derivedProfile);
@@ -113,7 +115,7 @@ export default function Dashboard() {
             ["Saldo mensal", money(balance), Wallet, balance >= 0 ? "Espaço disponível no mês" : "Valor a reorganizar com calma", balance >= 0 ? "green" : "peach"],
             ["Receita mensal", money(income), ArrowUpRight, transactionsInitialized ? `${monthIncomes.length} registros no mês` : "Valor do onboarding", "green"],
             ["Despesas mensais", money(expenses), ArrowDownRight, `${income ? Math.round(expenses / income * 100) : 0}% da renda`, "peach"],
-            ["Patrimônio acumulado", money(profile.accumulatedNetWorth), Landmark, profile.netWorthGoal > 0 ? `Meta ${money(profile.netWorthGoal)} · ${Math.min(100,profile.accumulatedNetWorth/profile.netWorthGoal*100).toFixed(0)}%` : "Atualize sua meta", "green"],
+            ["Patrimônio acumulado", money(accumulatedNetWorth), Landmark, netWorthGoal > 0 ? `Meta ${money(netWorthGoal)} · ${Math.min(100,accumulatedNetWorth/netWorthGoal*100).toFixed(0)}%` : "Atualize sua meta", "green"],
           ].map(([label,value,Icon,note,tone]) => { const I=Icon as typeof Wallet; return <Card key={String(label)} className="min-w-0 p-4 sm:p-5"><div className="flex items-start justify-between gap-3"><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl sm:h-10 sm:w-10 ${tone==="peach"?"bg-peach/20 text-[#9a532f]":"bg-mist text-forest"}`}><I size={19}/></span><span className="max-w-[58%] text-right text-[12px] font-bold leading-5 text-ink/50 sm:text-[11px]">{String(note)}</span></div><p className="mt-5 text-[13px] font-bold text-ink/45 sm:text-xs">{String(label)}</p><p className="mt-1 break-words font-display text-[1.75rem] leading-tight tracking-[-0.03em] sm:text-2xl">{String(value)}</p></Card>})}
         </div>
 

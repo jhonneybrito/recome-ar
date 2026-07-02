@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "./supabase/client";
-import { saveProfileDb } from "./db";
-import { loadFinancialProfile } from "./financial-storage";
+import { updateProfileAvatarDb } from "./db";
 
 const KEY = "recomecar:profile-photo:v1";
 const EVENT = "recomecar:profile-photo-updated";
@@ -44,19 +43,21 @@ export function useProfilePhoto() {
     if (supabase) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        let avatarUrl = "";
+        let avatarUrl = next;
         if (next.startsWith("data:")) {
           const blob = await (await fetch(next)).blob();
-          const path = `${user.id}/avatar-${Date.now()}.${blob.type.split("/")[1] || "jpg"}`;
-          const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true });
+          const extension = blob.type.split("/")[1] || "jpg";
+          const filePath = `${user.id}/avatar-${Date.now()}.${extension}`;
+          const { error } = await supabase.storage.from("avatars").upload(filePath, blob, { upsert: true });
           if (error) throw error;
-          avatarUrl = supabase.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+          avatarUrl = supabase.storage.from("avatars").getPublicUrl(filePath).data.publicUrl;
         }
         if (!next) {
           const { data: files } = await supabase.storage.from("avatars").list(user.id);
           if (files?.length) await supabase.storage.from("avatars").remove(files.map((file) => `${user.id}/${file.name}`));
+          avatarUrl = "";
         }
-        await saveProfileDb(loadFinancialProfile(), avatarUrl);
+        await updateProfileAvatarDb(avatarUrl);
         setPhoto(avatarUrl);
         saveProfilePhoto(avatarUrl);
         return;

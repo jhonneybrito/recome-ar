@@ -175,6 +175,17 @@ export async function getProfileDb() {
   return { name: data.name || context.user.user_metadata?.name || "Você", mainGoal: data.main_goal || "Criar uma reserva", civilStatus: data.relationship_status || "Solteiro(a)", accumulatedNetWorth: Number(data.current_assets || 0), netWorthGoal: Number(data.net_worth_goal || 0), updatedAt: data.updated_at } as Partial<FinancialProfile>;
 }
 
+export async function updateProfileAvatarDb(avatarUrl: string) {
+  const context = await clientWithUser();
+  if (!context) return null;
+  const { error } = await context.supabase
+    .from("profiles")
+    .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+    .eq("user_id", context.user.id);
+  if (error) throw error;
+  return true;
+}
+
 export async function saveProfileDb(profile: FinancialProfile, avatarUrl?: string) {
   const context = await clientWithUser();
   if (!context) return null;
