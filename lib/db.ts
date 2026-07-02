@@ -8,7 +8,8 @@ import type { FinancialProfile } from "./financial-calculations";
 
 function normalizeTransactionTypeDb(type: unknown) {
   const value = String(type || "").trim().toLowerCase();
-  if (["income", "receita", "entrada", "in", "credit", "credito", "crédito"].includes(value)) return "income";
+  if (["income", "receita", "entrada", "revenue", "in", "credit", "credito", "crédito"].includes(value)) return "income";
+  if (["expense", "despesa", "saida", "saída", "out", "debit", "debito", "débito"].includes(value)) return "expense";
   return "expense";
 }
 

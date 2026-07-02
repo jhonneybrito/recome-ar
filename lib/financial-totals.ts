@@ -25,6 +25,7 @@ export function getCurrentMonthKey(date = new Date()) {
 export function normalizeTransactionTypeForTotals(type: unknown): TransactionType {
   const value = String(type || "").trim().toLowerCase();
   if (["income", "receita", "entrada", "revenue", "in", "credit", "credito", "crédito"].includes(value)) return "income";
+  if (["expense", "despesa", "saida", "saída", "out", "debit", "debito", "débito"].includes(value)) return "expense";
   return "expense";
 }
 

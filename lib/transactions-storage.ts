@@ -20,26 +20,52 @@ export const incomeCategories = ["Salário", "Renda extra", "Freelance", "Invest
 export const expenseCategories = ["Moradia", "Alimentação", "Transporte", "Saúde", "Educação", "Contas da casa", "Lazer", "Compras", "Dívidas e parcelas", "Assinaturas", "Impostos", "Cuidados pessoais", "Filhos e família", "Pets", "Viagens", "Doações", "Outras despesas"];
 
 const STORAGE_KEY = "recomecar:transactions:v1";
-const TRANSACTIONS_UPDATED_EVENT = "recomecar:transactions-updated";
 const initialTransactions: FinancialTransaction[] = [];
 
+let transactionsCache: FinancialTransaction[] = initialTransactions;
+let initializedCache = false;
+let readyCache = false;
+let remoteRefreshPromise: Promise<FinancialTransaction[] | null> | null = null;
+let refreshSequence = 0;
+const subscribers = new Set<() => void>();
+
+function emitTransactionsChanged() {
+  subscribers.forEach((listener) => listener());
+}
+
+function setTransactionsCache(transactions: FinancialTransaction[], initialized = true) {
+  transactionsCache = transactions.map(normalizeTransaction);
+  initializedCache = initialized;
+  readyCache = true;
+  emitTransactionsChanged();
+}
+
 export function notifyTransactionsUpdated() {
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(TRANSACTIONS_UPDATED_EVENT));
+  emitTransactionsChanged();
 }
 
 export function normalizeTransactionType(type: unknown): TransactionType {
   const value = String(type || "").trim().toLowerCase();
-  if (["income", "receita", "entrada", "in", "credit", "credito", "crédito"].includes(value)) return "income";
+  if (["income", "receita", "entrada", "revenue", "in", "credit", "credito", "crédito"].includes(value)) return "income";
+  if (["expense", "despesa", "saida", "saída", "out", "debit", "debito", "débito"].includes(value)) return "expense";
   return "expense";
 }
 
+export function normalizeTransaction(transaction: FinancialTransaction): FinancialTransaction {
+  return {
+    ...transaction,
+    amount: Number(transaction.amount) || 0,
+    type: normalizeTransactionType(transaction.type),
+    date: transaction.date || new Date().toISOString().slice(0, 10),
+  };
+}
+
 export function loadTransactions(): FinancialTransaction[] {
-  if (typeof window === "undefined") return initialTransactions;
-  if (isSupabaseConfigured) return initialTransactions;
+  if (typeof window === "undefined") return transactionsCache;
+  if (isSupabaseConfigured) return transactionsCache;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    const parsed = stored ? JSON.parse(stored) as FinancialTransaction[] : initialTransactions;
-    return parsed.map((transaction) => ({ ...transaction, type: normalizeTransactionType(transaction.type) }));
+    return stored ? (JSON.parse(stored) as FinancialTransaction[]).map(normalizeTransaction) : initialTransactions;
   } catch {
     return initialTransactions;
   }
@@ -51,93 +77,122 @@ export function hasStoredTransactions() {
 
 export function saveTransactions(transactions: FinancialTransaction[]) {
   if (typeof window === "undefined" || isSupabaseConfigured) return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-  notifyTransactionsUpdated();
+  const normalized = transactions.map(normalizeTransaction);
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  setTransactionsCache(normalized, true);
+}
+
+async function refreshTransactionsFromRemote(force = false) {
+  if (!isSupabaseConfigured) {
+    const local = loadTransactions();
+    setTransactionsCache(local, hasStoredTransactions());
+    return local;
+  }
+
+  if (remoteRefreshPromise && !force) return remoteRefreshPromise;
+
+  const requestId = ++refreshSequence;
+  remoteRefreshPromise = getTransactionsDb()
+    .then((remote) => {
+      const normalized = (remote || []).map(normalizeTransaction);
+      if (requestId === refreshSequence) {
+        setTransactionsCache(normalized, true);
+        console.info("[transactions] dados reais recarregados", { count: normalized.length });
+      } else {
+        console.info("[transactions] resposta antiga ignorada", { count: normalized.length });
+      }
+      return normalized;
+    })
+    .catch((error) => {
+      readyCache = true;
+      console.error("[transactions] erro ao recarregar movimentações", error);
+      emitTransactionsChanged();
+      return null;
+    })
+    .finally(() => {
+      if (requestId === refreshSequence) remoteRefreshPromise = null;
+    });
+
+  return remoteRefreshPromise;
 }
 
 export function useTransactions() {
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>(initialTransactions);
-  const [initialized, setInitialized] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>(transactionsCache);
+  const [initialized, setInitialized] = useState(initializedCache);
+  const [ready, setReady] = useState(readyCache);
 
-  const refreshRemote = useCallback(async () => {
-    const remote = await getTransactionsDb();
-    if (remote) {
-      setTransactions(remote.map((transaction) => ({ ...transaction, type: normalizeTransactionType(transaction.type) })));
-      setInitialized(true);
-    }
-    setReady(true);
-    return remote;
+  const syncFromCache = useCallback(() => {
+    setTransactions(transactionsCache);
+    setInitialized(initializedCache);
+    setReady(readyCache);
   }, []);
 
+  const refreshTransactions = useCallback(async () => {
+    const refreshed = await refreshTransactionsFromRemote(true);
+    syncFromCache();
+    return refreshed;
+  }, [syncFromCache]);
+
   useEffect(() => {
+    subscribers.add(syncFromCache);
+    syncFromCache();
+
     if (isSupabaseConfigured) {
-      setTransactions([]);
-      setInitialized(false);
-      refreshRemote().catch((error) => { console.error("[transactions] erro ao carregar movimentações", error); setReady(true); });
-      const syncRemote = () => { refreshRemote().catch((error) => console.error("[transactions] erro ao recarregar movimentações", error)); };
-      window.addEventListener(TRANSACTIONS_UPDATED_EVENT, syncRemote);
-      return () => window.removeEventListener(TRANSACTIONS_UPDATED_EVENT, syncRemote);
+      refreshTransactionsFromRemote();
+      return () => {
+        subscribers.delete(syncFromCache);
+      };
     }
 
-    const sync = () => {
-      setTransactions(loadTransactions());
-      setInitialized(hasStoredTransactions());
-      setReady(true);
+    const syncLocal = () => {
+      setTransactionsCache(loadTransactions(), hasStoredTransactions());
     };
-    sync();
-    window.addEventListener("storage", sync);
-    window.addEventListener(TRANSACTIONS_UPDATED_EVENT, sync);
+    syncLocal();
+    window.addEventListener("storage", syncLocal);
     return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(TRANSACTIONS_UPDATED_EVENT, sync);
+      subscribers.delete(syncFromCache);
+      window.removeEventListener("storage", syncLocal);
     };
-  }, [refreshRemote]);
+  }, [syncFromCache]);
 
   const addTransaction = useCallback(async (transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
-    const normalized = { ...transaction, type: normalizeTransactionType(transaction.type) };
+    const normalized = { ...transaction, type: normalizeTransactionType(transaction.type), amount: Number(transaction.amount) || 0 };
     if (isSupabaseConfigured) {
       await saveTransactionDb(normalized);
       console.info("[transactions] movimentação salva", { action: "create", type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
-      await refreshRemote();
-      notifyTransactionsUpdated();
+      await refreshTransactionsFromRemote(true);
       return;
     }
     const current = loadTransactions();
-    console.info("[transactions] movimentação salva", { action: "create-local", type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
     const next = [{ ...normalized, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...current];
-    setTransactions(next);
+    console.info("[transactions] movimentação salva", { action: "create-local", type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
     saveTransactions(next);
-  }, [refreshRemote]);
+  }, []);
 
   const removeTransaction = useCallback(async (id: string) => {
     if (isSupabaseConfigured) {
       await deleteTransactionDb(id);
       console.info("[transactions] movimentação excluída", { id });
-      await refreshRemote();
-      notifyTransactionsUpdated();
+      await refreshTransactionsFromRemote(true);
       return;
     }
-    console.info("[transactions] movimentação excluída", { action: "delete-local", id });
     const next = loadTransactions().filter((transaction) => transaction.id !== id);
-    setTransactions(next);
+    console.info("[transactions] movimentação excluída", { action: "delete-local", id });
     saveTransactions(next);
-  }, [refreshRemote]);
+  }, []);
 
   const updateTransaction = useCallback(async (id: string, transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
-    const normalized = { ...transaction, type: normalizeTransactionType(transaction.type) };
+    const normalized = { ...transaction, type: normalizeTransactionType(transaction.type), amount: Number(transaction.amount) || 0 };
     if (isSupabaseConfigured) {
       await saveTransactionDb(normalized, id);
       console.info("[transactions] movimentação salva", { action: "update", id, type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
-      await refreshRemote();
-      notifyTransactionsUpdated();
+      await refreshTransactionsFromRemote(true);
       return;
     }
-    console.info("[transactions] movimentação salva", { action: "update-local", id, type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
     const next = loadTransactions().map((item) => item.id === id ? { ...item, ...normalized } : item);
-    setTransactions(next);
+    console.info("[transactions] movimentação salva", { action: "update-local", id, type: normalized.type, amount: normalized.amount, date: normalized.date, category: normalized.category });
     saveTransactions(next);
-  }, [refreshRemote]);
+  }, []);
 
-  return { transactions, addTransaction, updateTransaction, removeTransaction, initialized, ready, refreshTransactions: refreshRemote };
+  return { transactions, addTransaction, updateTransaction, removeTransaction, initialized, ready, refreshTransactions };
 }
