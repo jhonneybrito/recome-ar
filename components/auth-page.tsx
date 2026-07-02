@@ -10,6 +10,16 @@ import { isSupabaseConfigured, resetPassword, signIn, signUp } from "@/lib/auth"
 import { saveLeadDb } from "@/lib/db";
 import { trackEvent } from "@/lib/marketing";
 
+function formatDebugError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Erro desconhecido ao concluir a ação.";
+  }
+}
+
 export default function AuthPage({ mode }: { mode: "login" | "register" | "forgot" }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -71,7 +81,9 @@ export default function AuthPage({ mode }: { mode: "login" | "register" | "forgo
       setError("Configure o Supabase para habilitar a recuperação de senha.");
     }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Não foi possível concluir. Tente novamente.");
+      const message = formatDebugError(caught);
+      console.error("[auth-page] erro exibido na interface", caught);
+      setError(message);
     } finally {
       setSubmitting(false);
     }
