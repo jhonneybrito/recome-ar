@@ -21,6 +21,17 @@ import { calculateFinancialTotals, getCurrentMonthKey, logFinancialTotalsDebug }
 const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const monthYear = (date: Date | null) => date ? new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(date) : "depende de criar saldo mensal";
 
+type DashboardTransactionDebug = {
+  id?: string;
+  amount?: number;
+  type?: string;
+  category?: string;
+  date?: string;
+  createdAt?: string;
+  created_at?: string;
+  user_id?: string;
+};
+
 export default function Dashboard() {
   const { profile } = useFinancialProfile();
   const { state: gamification } = useGamification();
@@ -48,7 +59,7 @@ export default function Dashboard() {
     logFinancialTotalsDebug("dashboard", totals);
     console.log("[dashboard] transactions carregadas:", transactions);
     transactions.forEach((transaction) => {
-      const raw = transaction as FinancialTransaction & { created_at?: string; user_id?: string };
+      const raw = transaction as DashboardTransactionDebug;
       console.log("[dashboard] transaction normalizada:", {
         id: raw.id,
         amount: raw.amount,
