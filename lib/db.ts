@@ -6,6 +6,12 @@ import type { DebtRecord } from "./debts-storage";
 import type { GoalRecord } from "./goals-storage";
 import type { FinancialProfile } from "./financial-calculations";
 
+function normalizeTransactionTypeDb(type: unknown) {
+  const value = String(type || "").trim().toLowerCase();
+  if (["income", "receita", "entrada", "in", "credit", "credito", "crédito"].includes(value)) return "income";
+  return "expense";
+}
+
 async function clientWithUser() {
   const supabase = createClient();
   if (!supabase) return null;
@@ -68,7 +74,7 @@ export async function getTransactionsDb() {
     .eq("user_id", context.user.id)
     .order("date", { ascending: false });
   if (error) throw error;
-  return (data || []).map((row) => ({ id: row.id, description: row.name, amount: Number(row.amount), type: row.type, category: row.category || "", date: row.date, createdAt: row.created_at })) as FinancialTransaction[];
+  return (data || []).map((row) => ({ id: row.id, description: row.name, amount: Number(row.amount), type: normalizeTransactionTypeDb(row.type), category: row.category || "", date: row.date, createdAt: row.created_at })) as FinancialTransaction[];
 }
 
 export async function saveTransactionDb(item: Omit<FinancialTransaction, "id" | "createdAt">, id?: string) {

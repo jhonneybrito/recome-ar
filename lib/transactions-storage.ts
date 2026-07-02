@@ -20,14 +20,26 @@ export const incomeCategories = ["Salário", "Renda extra", "Freelance", "Invest
 export const expenseCategories = ["Moradia", "Alimentação", "Transporte", "Saúde", "Educação", "Contas da casa", "Lazer", "Compras", "Dívidas e parcelas", "Assinaturas", "Impostos", "Cuidados pessoais", "Filhos e família", "Pets", "Viagens", "Doações", "Outras despesas"];
 
 const STORAGE_KEY = "recomecar:transactions:v1";
+const TRANSACTIONS_UPDATED_EVENT = "recomecar:transactions-updated";
 const initialTransactions: FinancialTransaction[] = [];
+
+export function notifyTransactionsUpdated() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(TRANSACTIONS_UPDATED_EVENT));
+}
+
+export function normalizeTransactionType(type: unknown): TransactionType {
+  const value = String(type || "").trim().toLowerCase();
+  if (["income", "receita", "entrada", "in", "credit", "credito", "crédito"].includes(value)) return "income";
+  return "expense";
+}
 
 export function loadTransactions(): FinancialTransaction[] {
   if (typeof window === "undefined") return initialTransactions;
   if (isSupabaseConfigured) return initialTransactions;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : initialTransactions;
+    const parsed = stored ? JSON.parse(stored) as FinancialTransaction[] : initialTransactions;
+    return parsed.map((transaction) => ({ ...transaction, type: normalizeTransactionType(transaction.type) }));
   } catch {
     return initialTransactions;
   }
@@ -40,7 +52,7 @@ export function hasStoredTransactions() {
 export function saveTransactions(transactions: FinancialTransaction[]) {
   if (typeof window === "undefined" || isSupabaseConfigured) return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-  window.dispatchEvent(new Event("recomecar:transactions-updated"));
+  notifyTransactionsUpdated();
 }
 
 export function useTransactions() {
@@ -48,18 +60,24 @@ export function useTransactions() {
   const [initialized, setInitialized] = useState(false);
   const [ready, setReady] = useState(false);
 
+  const refreshRemote = useCallback(async () => {
+    const remote = await getTransactionsDb();
+    if (remote) {
+      setTransactions(remote.map((transaction) => ({ ...transaction, type: normalizeTransactionType(transaction.type) })));
+      setInitialized(true);
+    }
+    setReady(true);
+    return remote;
+  }, []);
+
   useEffect(() => {
     if (isSupabaseConfigured) {
       setTransactions([]);
       setInitialized(false);
-      getTransactionsDb()
-        .then((remote) => {
-          setTransactions(remote || []);
-          setInitialized(true);
-          setReady(true);
-        })
-        .catch((error) => { console.error(error); setReady(true); });
-      return;
+      refreshRemote().catch((error) => { console.error("[transactions] erro ao carregar movimentações", error); setReady(true); });
+      const syncRemote = () => { refreshRemote().catch((error) => console.error("[transactions] erro ao recarregar movimentações", error)); };
+      window.addEventListener(TRANSACTIONS_UPDATED_EVENT, syncRemote);
+      return () => window.removeEventListener(TRANSACTIONS_UPDATED_EVENT, syncRemote);
     }
 
     const sync = () => {
@@ -69,40 +87,51 @@ export function useTransactions() {
     };
     sync();
     window.addEventListener("storage", sync);
-    window.addEventListener("recomecar:transactions-updated", sync);
+    window.addEventListener(TRANSACTIONS_UPDATED_EVENT, sync);
     return () => {
       window.removeEventListener("storage", sync);
-      window.removeEventListener("recomecar:transactions-updated", sync);
+      window.removeEventListener(TRANSACTIONS_UPDATED_EVENT, sync);
     };
-  }, []);
-
-  const refreshRemote = useCallback(async () => {
-    const remote = await getTransactionsDb();
-    if (remote) { setTransactions(remote); setInitialized(true); }
-    return remote;
-  }, []);
+  }, [refreshRemote]);
 
   const addTransaction = useCallback(async (transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
-    if (isSupabaseConfigured) { await saveTransactionDb(transaction); await refreshRemote(); return; }
+    const normalized = { ...transaction, type: normalizeTransactionType(transaction.type) };
+    if (isSupabaseConfigured) {
+      await saveTransactionDb(normalized);
+      await refreshRemote();
+      notifyTransactionsUpdated();
+      return;
+    }
     const current = loadTransactions();
-    const next = [{ ...transaction, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...current];
+    const next = [{ ...normalized, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...current];
     setTransactions(next);
     saveTransactions(next);
   }, [refreshRemote]);
 
   const removeTransaction = useCallback(async (id: string) => {
-    if (isSupabaseConfigured) { await deleteTransactionDb(id); await refreshRemote(); return; }
+    if (isSupabaseConfigured) {
+      await deleteTransactionDb(id);
+      await refreshRemote();
+      notifyTransactionsUpdated();
+      return;
+    }
     const next = loadTransactions().filter((transaction) => transaction.id !== id);
     setTransactions(next);
     saveTransactions(next);
   }, [refreshRemote]);
 
   const updateTransaction = useCallback(async (id: string, transaction: Omit<FinancialTransaction, "id" | "createdAt">) => {
-    if (isSupabaseConfigured) { await saveTransactionDb(transaction, id); await refreshRemote(); return; }
-    const next = loadTransactions().map((item) => item.id === id ? { ...item, ...transaction } : item);
+    const normalized = { ...transaction, type: normalizeTransactionType(transaction.type) };
+    if (isSupabaseConfigured) {
+      await saveTransactionDb(normalized, id);
+      await refreshRemote();
+      notifyTransactionsUpdated();
+      return;
+    }
+    const next = loadTransactions().map((item) => item.id === id ? { ...item, ...normalized } : item);
     setTransactions(next);
     saveTransactions(next);
   }, [refreshRemote]);
 
-  return { transactions, addTransaction, updateTransaction, removeTransaction, initialized, ready };
+  return { transactions, addTransaction, updateTransaction, removeTransaction, initialized, ready, refreshTransactions: refreshRemote };
 }

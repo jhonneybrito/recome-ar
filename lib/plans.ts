@@ -5,10 +5,10 @@ import { createClient } from "./supabase/client";
 import { claimPurchaseAccessDb } from "./db";
 
 export type PlanId = "free" | "premium_monthly" | "premium_annual";
-export const FREE_LIMITS = { transactionsPerMonth: 20, goals: 3, debts: 3, couplePlans: 1 };
+export const FREE_LIMITS = { transactionsPerMonth: Number.POSITIVE_INFINITY, goals: Number.POSITIVE_INFINITY, debts: Number.POSITIVE_INFINITY, couplePlans: Number.POSITIVE_INFINITY };
 
 export function useUserPlan() {
-  const [plan, setPlan] = useState<PlanId>("free");
+  const [plan, setPlan] = useState<PlanId>("premium_monthly");
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) return;
@@ -19,5 +19,5 @@ export function useUserPlan() {
       if (profile?.plan) setPlan(profile.plan as PlanId);
     }).catch(console.error);
   }, []);
-  return { plan, isPremium: plan !== "free" };
+  return { plan, isPremium: true };
 }

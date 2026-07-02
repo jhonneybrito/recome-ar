@@ -16,6 +16,8 @@ export default function TransactionModal({ open, onClose, transaction = null }: 
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(expenseCategories[0]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -34,8 +36,9 @@ export default function TransactionModal({ open, onClose, transaction = null }: 
     setCategory(next === "income" ? incomeCategories[0] : expenseCategories[0]);
   };
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError("");
     const numericAmount = Number(amount.replace(",", "."));
     if (!description.trim() || numericAmount <= 0) return;
     const payload = { description: description.trim(), amount: numericAmount, type, category, date };
@@ -44,9 +47,18 @@ export default function TransactionModal({ open, onClose, transaction = null }: 
       setUpgradeOpen(true);
       return;
     }
-    if (transaction) updateTransaction(transaction.id, payload);
-    else addTransaction(payload);
-    onClose();
+    setSubmitting(true);
+    try {
+      if (transaction) await updateTransaction(transaction.id, payload);
+      else await addTransaction(payload);
+      onClose();
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Não foi possível salvar a movimentação.";
+      console.error("[transactions] erro ao salvar movimentação", caught);
+      setError(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -60,7 +72,8 @@ export default function TransactionModal({ open, onClose, transaction = null }: 
           </div>
           <div className="grid gap-5 sm:grid-cols-2"><Input required label="Descrição" value={description} onChange={(e)=>setDescription(e.target.value)} placeholder={type==="expense"?"Ex.: Supermercado":"Ex.: Salário"}/><Input required label="Valor (R$)" type="number" min="0.01" step="0.01" value={amount} onChange={(e)=>setAmount(e.target.value)} placeholder="0,00"/></div>
           <div className="grid gap-5 sm:grid-cols-2"><label className="grid gap-2 text-sm font-bold text-ink/80">Categoria<select value={category} onChange={(e)=>setCategory(e.target.value)} className="focus-ring rounded-2xl border border-ink/10 bg-white px-4 py-3.5">{categories.map((item)=><option key={item}>{item}</option>)}</select></label><Input required label="Data" type="date" value={date} onChange={(e)=>setDate(e.target.value)}/></div>
-          <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit">{transaction ? "Salvar alterações" : `Salvar ${type==="income"?"receita":"despesa"}`}</Button></div>
+          {error && <p role="alert" className="rounded-2xl bg-peach/15 p-3 text-sm font-bold text-[#8a4c2d]">{error}</p>}
+          <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>Cancelar</Button><Button type="submit" disabled={submitting}>{submitting ? "Salvando..." : transaction ? "Salvar alterações" : `Salvar ${type==="income"?"receita":"despesa"}`}</Button></div>
         </form>
       </div>
     </div><UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} resource="20 lançamentos neste mês"/></>

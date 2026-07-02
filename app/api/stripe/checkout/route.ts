@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       metadata: { user_id: user.id, plan },
       subscription_data: { metadata: { user_id: user.id, plan } },
       success_url: `${PRODUCTION_APP_URL}/dashboard?payment=success`,
-      cancel_url: `${PRODUCTION_APP_URL}/plans?payment=cancelled`,
+      cancel_url: `${PRODUCTION_APP_URL}/dashboard?payment=cancelled`,
     });
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (error) {
